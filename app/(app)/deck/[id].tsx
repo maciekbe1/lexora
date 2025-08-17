@@ -104,7 +104,6 @@ export default function DeckDetailScreen() {
         deckName={deckName}
         flashcardCount={flashcards.length}
         isCustomDeck={deck.is_custom || false}
-        showOptionsMenu={showOptionsMenu}
         onAddFlashcard={handleAddFlashcard}
         onToggleOptions={handleToggleOptionsMenu}
       />

@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { useLocalSearchParams } from "expo-router";
-import { useFlashcardManagement, useDeferredLoading } from "@/shared/hooks";
-import { useAuthStore } from "@/store";
+import { useDeferredLoading, useFlashcardManagement } from "@/shared/hooks";
 import type { CustomFlashcard } from "@/shared/types/flashcard";
+import { useAuthStore } from "@/store";
+import { useLocalSearchParams } from "expo-router";
+import { useState } from "react";
 
 export function useDeckDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -37,12 +37,9 @@ export function useDeckDetail() {
   const deckName = deck?.deck_name || deck?.custom_name || "Talia bez nazwy";
   const deckDescription = deck?.deck_description || "Brak opisu";
 
-  // Auto-close options menu when any modal opens
-  useEffect(() => {
-    if (showAddFlashcardModal || showEditDeckModal) {
-      setShowOptionsMenu(false);
-    }
-  }, [showAddFlashcardModal, showEditDeckModal]);
+  // Note: Avoid auto-closing via effects to prevent scheduling updates
+  // during insertion phase in React 19. We close the options menu
+  // directly in action handlers instead.
 
   // Handlers
   const handleEditFlashcard = (flashcard: CustomFlashcard) => {
@@ -51,10 +48,12 @@ export function useDeckDetail() {
   };
 
   const handleAddFlashcard = () => {
+    setShowOptionsMenu(false);
     setShowAddFlashcardModal(true);
   };
 
   const handleEditDeck = () => {
+    setShowOptionsMenu(false);
     setShowEditDeckModal(true);
   };
 
@@ -80,7 +79,7 @@ export function useDeckDetail() {
     optionsMenu: {
       show: () => setShowOptionsMenu(true),
       hide: () => setShowOptionsMenu(false),
-      toggle: () => setShowOptionsMenu(!showOptionsMenu),
+      toggle: () => setShowOptionsMenu((v) => !v),
     },
   };
 

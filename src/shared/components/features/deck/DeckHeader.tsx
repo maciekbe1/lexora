@@ -14,7 +14,6 @@ interface DeckHeaderProps {
   deckName: string;
   flashcardCount: number;
   isCustomDeck: boolean;
-  showOptionsMenu?: boolean;
   onAddFlashcard: () => void;
   onToggleOptions?: () => void;
 }
@@ -23,15 +22,13 @@ export function DeckHeader({
   deckName,
   flashcardCount,
   isCustomDeck,
-  showOptionsMenu = false,
   onAddFlashcard,
   onToggleOptions,
 }: DeckHeaderProps) {
   const insets = useSafeAreaInsets();
   const [showOptions, setShowOptions] = useState(false);
-  
+
   // Use external control if provided, otherwise use internal state
-  const actualShowOptions = onToggleOptions !== undefined ? showOptionsMenu : showOptions;
   const toggleOptions = onToggleOptions || (() => setShowOptions(!showOptions));
 
   return (
@@ -66,7 +63,6 @@ export function DeckHeader({
             </View>
           )}
         </View>
-
       </View>
     </>
   );

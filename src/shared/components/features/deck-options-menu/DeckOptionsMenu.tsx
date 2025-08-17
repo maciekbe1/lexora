@@ -47,7 +47,7 @@ export function DeckOptionsMenu({
     }).start();
   }, [translateY]);
 
-  const dismissWithAnimation = React.useCallback(() => {
+  const dismissWithAnimation = React.useCallback((afterClose?: () => void) => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
     const distance = menuHeightRef.current > 0 ? menuHeightRef.current + 40 : 200;
@@ -57,8 +57,13 @@ export function DeckOptionsMenu({
       useNativeDriver: true,
     }).start(() => {
       onClose();
+      // Run the follow-up action (e.g., open edit modal) after closing
+      // Defer to the next frame to avoid scheduling updates during insertion
       requestAnimationFrame(() => {
         isClosingRef.current = false;
+        if (afterClose) {
+          afterClose();
+        }
       });
     });
   }, [onClose, translateY]);
@@ -90,13 +95,15 @@ export function DeckOptionsMenu({
   ).current;
 
   const handleEditDeck = () => {
-    dismissWithAnimation();
-    onEditDeck();
+    dismissWithAnimation(() => {
+      onEditDeck();
+    });
   };
 
   const handleDeleteDeck = () => {
-    dismissWithAnimation();
-    onDeleteDeck();
+    dismissWithAnimation(() => {
+      onDeleteDeck();
+    });
   };
 
   if (!visible) return null;
