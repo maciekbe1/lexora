@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
 import type { CustomFlashcard, UserDeck } from "@/shared/types/flashcard";
+import React from "react";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 
-import { BaseModal } from "@/shared/components/ui";
 import { DeckSelector } from "@/shared/components/features/deck";
 import { ImagePickerComponent } from "@/shared/components/features/image-picker";
+import { BaseModal } from "@/shared/components/ui";
+import {
+  useCustomFlashcardForm,
+  UseCustomFlashcardFormParams,
+} from "@/shared/hooks";
 
 interface CustomFlashcardModalProps {
   visible: boolean;
@@ -25,117 +29,35 @@ export function CustomFlashcardModal({
   preselectedDeckId,
   editingFlashcard,
 }: CustomFlashcardModalProps) {
-  const [frontText, setFrontText] = useState("");
-  const [backText, setBackText] = useState("");
-  const [hintText, setHintText] = useState("");
-  const [frontImageUrl, setFrontImageUrl] = useState("");
-  const [backImageUrl, setBackImageUrl] = useState("");
-  const [selectedDeck, setSelectedDeck] = useState<string>(
-    preselectedDeckId || ""
-  );
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Filter to only custom decks (not template decks)
-  const customDecks = userDecks.filter((deck) => deck.is_custom);
-
-  // Initialize form with editing data or reset
-  useEffect(() => {
-    if (!visible) return; // Only run when modal becomes visible
-
-    if (editingFlashcard) {
-      // Editing mode - populate fields
-      setFrontText(editingFlashcard.front_text);
-      setBackText(editingFlashcard.back_text);
-      setHintText(editingFlashcard.hint_text);
-      setFrontImageUrl(editingFlashcard.front_image_url);
-      setBackImageUrl(editingFlashcard.back_image_url);
-      setSelectedDeck(editingFlashcard.user_deck_id);
-    } else {
-      // Create mode - reset fields
-      setFrontText("");
-      setBackText("");
-      setHintText("");
-      setFrontImageUrl("");
-      setBackImageUrl("");
-
-      // Set deck selection
-      if (
-        preselectedDeckId &&
-        customDecks.find((deck) => deck.id === preselectedDeckId)
-      ) {
-        setSelectedDeck(preselectedDeckId);
-      } else if (customDecks.length === 1) {
-        setSelectedDeck(customDecks[0].id);
-      } else {
-        setSelectedDeck("");
-      }
-    }
-  }, [visible]); // Only depend on modal visibility to prevent loops
-
-  const handleCreate = async () => {
-    if (!frontText.trim()) {
-      Alert.alert("Błąd", "Tekst przedniej strony jest wymagany");
-      return;
-    }
-
-    if (!backText.trim()) {
-      Alert.alert("Błąd", "Tekst tylnej strony jest wymagany");
-      return;
-    }
-
-    if (!selectedDeck) {
-      Alert.alert("Błąd", "Wybierz talię dla fiszki");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const selectedDeckData = customDecks.find(
-        (deck) => deck.id === selectedDeck
-      );
-      if (!selectedDeckData) {
-        throw new Error("Selected deck not found");
-      }
-
-      const newFlashcard: Omit<
-        CustomFlashcard,
-        "id" | "created_at" | "updated_at"
-      > = {
-        user_deck_id: selectedDeck,
-        front_text: frontText.trim(),
-        back_text: backText.trim(),
-        hint_text: hintText.trim() || "",
-        front_image_url: frontImageUrl || "",
-        back_image_url: backImageUrl || "",
-        front_audio_url: "",
-        back_audio_url: "",
-        position: 0, // Will be set by the backend based on existing cards
-        user_id: selectedDeckData.user_id,
-      };
-
-      await onCreateFlashcard(newFlashcard);
-
-      // Reset form
-      resetForm();
-      onClose();
-    } catch (error) {
-      Alert.alert("Błąd", "Nie udało się utworzyć fiszki");
-      console.error("Create flashcard error:", error);
-    } finally {
-      setIsLoading(false);
-    }
+  const params: UseCustomFlashcardFormParams = {
+    visible,
+    userDecks,
+    onCreateFlashcard,
   };
+  if (preselectedDeckId !== undefined)
+    params.preselectedDeckId = preselectedDeckId;
+  if (editingFlashcard !== undefined)
+    params.editingFlashcard = editingFlashcard;
 
-  const resetForm = () => {
-    setFrontText("");
-    setBackText("");
-    setHintText("");
-    setFrontImageUrl("");
-    setBackImageUrl("");
-    if (!preselectedDeckId) {
-      setSelectedDeck("");
-    }
-  };
+  const {
+    customDecks,
+    frontText,
+    backText,
+    hintText,
+    frontImageUrl,
+    backImageUrl,
+    selectedDeck,
+    isLoading,
+    isTranslating,
+    setFrontText,
+    setBackText,
+    setHintText,
+    setFrontImageUrl,
+    setBackImageUrl,
+    setSelectedDeck,
+    markBackEdited,
+    handleCreate,
+  } = useCustomFlashcardForm(params);
 
   return (
     <BaseModal
@@ -144,7 +66,10 @@ export function CustomFlashcardModal({
       title={editingFlashcard ? "Edytuj fiszkę" : "Nowa fiszka"}
       rightButton={{
         text: editingFlashcard ? "Zapisz" : "Stwórz",
-        onPress: handleCreate,
+        onPress: async () => {
+          const ok = await handleCreate();
+          if (ok) onClose();
+        },
         disabled: isLoading || customDecks.length === 0,
         loading: isLoading,
       }}
@@ -188,7 +113,10 @@ export function CustomFlashcardModal({
             <TextInput
               style={[styles.input, styles.textArea]}
               value={backText}
-              onChangeText={setBackText}
+              onChangeText={(t) => {
+                markBackEdited();
+                setBackText(t);
+              }}
               placeholder="np. Hola, ¿cómo estás?"
               placeholderTextColor="#999"
               multiline
@@ -197,7 +125,12 @@ export function CustomFlashcardModal({
               editable={true}
               autoCapitalize="sentences"
             />
-            <Text style={styles.charCounter}>{backText.length}/500</Text>
+            <View style={styles.rowBetween}>
+              <Text style={styles.charCounter}>{backText.length}/500</Text>
+              {isTranslating && (
+                <Text style={styles.translatingHint}>Tłumaczę…</Text>
+              )}
+            </View>
           </View>
 
           <View style={styles.formGroup}>
@@ -256,5 +189,14 @@ const styles = StyleSheet.create({
     color: "#666",
     textAlign: "right",
     marginTop: 4,
+  },
+  rowBetween: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  translatingHint: {
+    fontSize: 12,
+    color: "#8E8E93",
   },
 });

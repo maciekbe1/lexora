@@ -7,3 +7,4 @@ export * from './useDeckDetail';
 export * from './useBaseModal';
 export * from './useModalAnimation';
 export * from './useModalGestures';
+export * from './useCustomFlashcardForm';
