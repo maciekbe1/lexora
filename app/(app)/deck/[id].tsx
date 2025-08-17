@@ -7,9 +7,9 @@ import { FlashcardItem } from "@/shared/components/features/flashcards/Flashcard
 import { useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
-import { useFlashcardManagement } from "../../../src/shared/hooks/useFlashcardManagement";
-import type { CustomFlashcard } from "../../../src/shared/types/flashcard";
-import { useAuthStore } from "../../../src/store/auth";
+import { useFlashcardManagement } from "@/shared/hooks";
+import type { CustomFlashcard } from "@/shared/types/flashcard";
+import { useAuthStore } from "@/store";
 
 export default function DeckDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuthStore } from "../../../store/auth";
+import { useAuthStore } from "@/store";
 
 interface OAuthButtonProps {
   provider: "google" | "apple";

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
-import type { CustomFlashcard, UserDeck } from "../../../types/flashcard";
+import type { CustomFlashcard, UserDeck } from "@/shared/types/flashcard";
 
-import { BaseModal } from "../../ui/BaseModal";
-import { DeckSelector } from "../deck/DeckSelector";
-import { ImagePickerComponent } from "../image-picker";
+import { BaseModal } from "@/shared/components/ui";
+import { DeckSelector } from "@/shared/components/features/deck";
+import { ImagePickerComponent } from "@/shared/components/features/image-picker";
 
 interface CustomFlashcardModalProps {
   visible: boolean;

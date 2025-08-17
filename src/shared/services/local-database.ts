@@ -1,6 +1,6 @@
+import type { CustomDeck, CustomFlashcard, UserDeck } from '@/shared/types/flashcard';
 import * as SQLite from 'expo-sqlite';
 import { supabase } from '../../../lib/supabase';
-import type { CustomDeck, CustomFlashcard, UserDeck } from '../types/flashcard';
 
 export class LocalDatabase {
   private db: SQLite.SQLiteDatabase | null = null;

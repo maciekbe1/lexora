@@ -8,14 +8,14 @@ import {
   Text,
   View,
 } from "react-native";
-import { useAuthStore } from "../../../../store/auth";
+import { useAuthStore } from "@/store";
 import {
   SUPPORTED_LANGUAGES,
   getLanguageName,
-} from "../../../constants/languages";
-import type { TemplateDeck } from "../../../types/flashcard";
+} from "@/shared/constants/languages";
+import type { TemplateDeck } from "@/shared/types/flashcard";
 
-import { BaseModal } from "../../ui";
+import { BaseModal } from "@/shared/components/ui";
 import { LanguageTab } from "./LanguageTab";
 import { TemplateDeckCard } from "./TemplateDeckCard";
 import { useTemplateDeckSelection } from "./useTemplateDeckSelection";

@@ -1,8 +1,8 @@
 import * as ImagePicker from "expo-image-picker";
 import React from "react";
 import { Alert } from "react-native";
-import { storageService } from "../../../services/storage";
-import { unsplashService, type UnsplashImage } from "../../../services/unsplash";
+import { storageService } from "@/shared/services/storage";
+import { unsplashService, type UnsplashImage } from "@/shared/services/unsplash";
 
 export function useImagePicker(userId: string | undefined, onImageSelected: (url: string) => void) {
   const [modalVisible, setModalVisible] = React.useState(false);
@@ -99,4 +99,3 @@ export function useImagePicker(userId: string | undefined, onImageSelected: (url
 
   return { modalVisible, openModal, closeModal, unsplashImages, searchQuery, setSearchQuery, submitSearch, isLoading, isUploading, loadMoreImages, pickImageFromDevice, selectUnsplashImage } as const;
 }
-

@@ -11,8 +11,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { OAuthButton } from "../../src/shared/components/ui/OAuthButton";
-import { useAuthStore } from "../../src/store/auth";
+import { OAuthButton } from "@/shared/components/ui";
+import { useAuthStore } from "@/store";
 
 export default function SignInScreen() {
   const [email, setEmail] = useState("");

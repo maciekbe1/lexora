@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { AppHeader } from "../../src/shared/components/ui/AppHeader";
+import { AppHeader } from "@/shared/components/ui";
 
 interface SearchCategory {
   id: string;

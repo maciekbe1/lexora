@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import type { UnsplashImage } from "../../../services/unsplash";
+import type { UnsplashImage } from "@/shared/services/unsplash";
 
 export function SourceButton({
   disabled,

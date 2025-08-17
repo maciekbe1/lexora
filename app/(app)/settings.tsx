@@ -9,8 +9,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { AppHeader } from "../../src/shared/components/ui/AppHeader";
-import { useAuthStore } from "../../src/store/auth";
+import { AppHeader } from "@/shared/components/ui";
+import { useAuthStore } from "@/store";
 
 interface SettingItem {
   id: string;

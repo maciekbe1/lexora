@@ -8,9 +8,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuthStore } from "../../../../store/auth";
+import { useAuthStore } from "@/store";
 
-import { BaseModal } from "../../ui";
+import { BaseModal } from "@/shared/components/ui";
 import { SearchBar, SourceButton, UnsplashGrid } from "./components";
 import { useImagePicker } from "./useImagePicker";
 

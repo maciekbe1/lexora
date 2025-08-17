@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import type { TemplateDeck } from "../../../types/flashcard";
+import type { TemplateDeck } from "@/shared/types/flashcard";
 
 const getDifficultyColor = (level: number) => {
   switch (level) {

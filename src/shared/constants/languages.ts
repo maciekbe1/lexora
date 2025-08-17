@@ -1,4 +1,4 @@
-import type { Language } from '../types/flashcard';
+import type { Language } from '@/shared/types/flashcard';
 
 export const SUPPORTED_LANGUAGES: Language[] = [
   { code: 'en', name: 'English', flag: '🇺🇸' },

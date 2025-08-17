@@ -1,8 +1,8 @@
 import { User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
-import { localDatabase } from '../services/local-database';
-import { storageService } from '../services/storage';
-import { syncService } from '../services/sync';
+import { localDatabase } from '@/shared/services/local-database';
+import { storageService } from '@/shared/services/storage';
+import { syncService } from '@/shared/services/sync';
 
 export function useAppInitialization(user: User | null) {
   const [isInitialized, setIsInitialized] = useState(false);

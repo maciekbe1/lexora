@@ -1,7 +1,7 @@
 import React from "react";
 import { Alert } from "react-native";
 import { supabase } from "../../../../../lib/supabase";
-import type { TemplateDeck } from "../../../types/flashcard";
+import type { TemplateDeck } from "@/shared/types/flashcard";
 
 export function useTemplateDeckSelection(userId?: string) {
   const [templateDecks, setTemplateDecks] = React.useState<TemplateDeck[]>([]);
@@ -82,4 +82,3 @@ export function useTemplateDeckSelection(userId?: string) {
     addDeckToCollection,
   } as const;
 }
-

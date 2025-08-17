@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity } from "react-native";
-import type { Language } from "../../../types/flashcard";
+import type { Language } from "@/shared/types/flashcard";
 
 export function LanguageTab({
   item,

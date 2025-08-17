@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
-import type { UserDeck } from "../../../types/flashcard";
-import { BaseModal } from "../../ui/BaseModal";
-import { ImagePickerComponent } from "../image-picker";
+import type { UserDeck } from "@/shared/types/flashcard";
+import { BaseModal } from "@/shared/components/ui";
+import { ImagePickerComponent } from "@/shared/components/features/image-picker";
 
 interface DeckEditModalProps {
   visible: boolean;

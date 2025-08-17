@@ -3,10 +3,10 @@ import * as Crypto from 'expo-crypto';
 import React, { useState } from 'react';
 import { Alert } from 'react-native';
 import { supabase } from '../../../lib/supabase';
-import { localDatabase } from '../services/local-database';
-import { storageService } from '../services/storage';
-import { syncService } from '../services/sync';
-import type { CustomDeck, CustomFlashcard, UserDeck } from '../types/flashcard';
+import { localDatabase } from '@/shared/services/local-database';
+import { storageService } from '@/shared/services/storage';
+import { syncService } from '@/shared/services/sync';
+import type { CustomDeck, CustomFlashcard, UserDeck } from '@/shared/types/flashcard';
 
 // Helpers extracted to reduce hook size
 async function syncUser(userId: string) {

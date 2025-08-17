@@ -2,8 +2,8 @@ import { Slot, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { LoadingScreen } from "../src/shared/components/ui/LoadingScreen";
-import { useAuthStore } from "../src/store/auth";
+import { LoadingScreen } from "@/shared/components/ui";
+import { useAuthStore } from "@/store";
 
 export default function RootLayout() {
   const { user, loading, initialize } = useAuthStore();

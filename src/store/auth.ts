@@ -1,7 +1,7 @@
+import { signInWithApple, signInWithGoogle } from '@/shared/services/supabase-oauth';
 import { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
 import { supabase } from '../../lib/supabase';
-import { signInWithApple, signInWithGoogle } from '../shared/services/supabase-oauth';
 
 interface AuthState {
   // State

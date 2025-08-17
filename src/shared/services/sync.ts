@@ -1,5 +1,5 @@
 import { supabase } from '../../../lib/supabase';
-import type { CustomDeck, CustomFlashcard } from '../types/flashcard';
+import type { CustomDeck, CustomFlashcard } from '@/shared/types/flashcard';
 import { localDatabase } from './local-database';
 
 export class SyncService {

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import type { CustomFlashcard } from "../../../types/flashcard";
+import type { CustomFlashcard } from "@/shared/types/flashcard";
 
 interface FlashcardItemProps {
   flashcard: CustomFlashcard;

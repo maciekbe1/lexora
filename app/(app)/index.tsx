@@ -2,20 +2,18 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 
-import { TemplateDeckSelectionModal } from "../../src/shared/components/features/template-deck-selection";
-import { FloatingActionButton } from "../../src/shared/components/ui/FloatingActionButton";
+import { TemplateDeckSelectionModal } from "@/shared/components/features/template-deck-selection";
+import { FloatingActionButton } from "@/shared/components/ui";
 
-import { useAppInitialization } from "../../src/shared/hooks/useAppInitialization";
-import { useDeckManagement } from "../../src/shared/hooks/useDeckManagement";
-import type { UserDeck } from "../../src/shared/types/flashcard";
+import { useAppInitialization, useDeckManagement } from "@/shared/hooks";
+import type { UserDeck } from "@/shared/types/flashcard";
 
-import { CustomDeckCreationModal } from "@/shared/components/features/custom-deck-creation/CustomDeckCreationModal";
-import { CustomFlashcardModal } from "@/shared/components/features/custom-flashcard/CustomFlashcardModal";
-import { DeckCard } from "@/shared/components/features/deck/DeckCard";
-import { EmptyDeckState } from "@/shared/components/features/deck/EmptyDeckState";
-import { FloatingActionMenu } from "@/shared/components/features/floating-action-menu/FloatingActionMenu";
+import { CustomDeckCreationModal } from "@/shared/components/features/custom-deck-creation";
+import { CustomFlashcardModal } from "@/shared/components/features/custom-flashcard";
+import { DeckCard, EmptyDeckState } from "@/shared/components/features/deck";
+import { FloatingActionMenu } from "@/shared/components/features/floating-action-menu";
 import { AppHeader } from "@/shared/components/ui";
-import { useAuthStore } from "../../src/store/auth";
+import { useAuthStore } from "@/store";
 
 export default function DashboardScreen() {
   const { user } = useAuthStore();

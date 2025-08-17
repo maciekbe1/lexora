@@ -8,10 +8,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SUPPORTED_LANGUAGES } from "../../../constants/languages";
-import type { CustomDeck } from "../../../types/flashcard";
-import { BaseModal } from "../../ui/BaseModal";
-import { ImagePickerComponent } from "../image-picker";
+import { SUPPORTED_LANGUAGES } from "@/shared/constants/languages";
+import type { CustomDeck } from "@/shared/types/flashcard";
+import { BaseModal } from "@/shared/components/ui";
+import { ImagePickerComponent } from "@/shared/components/features/image-picker";
 
 interface CustomDeckCreationModalProps {
   visible: boolean;
