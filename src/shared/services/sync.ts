@@ -1,5 +1,5 @@
 import { supabase } from '../../../lib/supabase';
-import type { CustomDeck, CustomFlashcard } from '@/shared/types/flashcard';
+import type { CustomFlashcard } from '@/shared/types/flashcard';
 import { localDatabase } from './local-database';
 
 export class SyncService {
@@ -65,7 +65,12 @@ export class SyncService {
 
       if (customDecks) {
         for (const deck of customDecks) {
-          await localDatabase.insertCustomDeck(deck);
+          // Ensure tags is an array if it comes as JSON string from remote
+          const deckToInsert = {
+            ...deck,
+            tags: typeof deck.tags === 'string' ? JSON.parse(deck.tags) : deck.tags
+          };
+          await localDatabase.insertCustomDeck(deckToInsert);
         }
       }
 
@@ -87,6 +92,9 @@ export class SyncService {
         }
       }
 
+      // After syncing from remote, recalculate flashcard counts for all custom decks
+      await localDatabase.fixDeckNames(); // This now includes fixing flashcard counts
+      
       console.log('Sync from remote completed');
     } catch (error) {
       console.error('Error syncing from remote:', error);
@@ -130,18 +138,48 @@ export class SyncService {
         return;
       }
 
-      const decksToSync: CustomDeck[] = customDecks.map(row => ({
-        id: row.id,
-        user_id: row.user_id,
-        name: row.name,
-        description: row.description,
-        language: row.language,
-        cover_image_url: row.cover_image_url,
-        tags: JSON.parse(row.tags || '[]'),
-        is_active: Boolean(row.is_active),
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-      }));
+      // Remove duplicates by id before syncing
+      const uniqueDecks = customDecks.filter((deck, index, self) => 
+        index === self.findIndex(d => d.id === deck.id)
+      );
+
+      const decksToSync = uniqueDecks.map(row => {
+        // Try to parse tags, if it's a JSON string convert to array, otherwise use empty array
+        let tags;
+        try {
+          if (typeof row.tags === 'string') {
+            tags = JSON.parse(row.tags);
+          } else {
+            tags = row.tags || [];
+          }
+        } catch {
+          console.log(`Failed to parse tags for deck ${row.id}: ${row.tags}`);
+          tags = [];
+        }
+
+        // Log what we're about to send for debugging
+        console.log(`Syncing deck ${row.id}: tags type=${typeof tags}, value=${JSON.stringify(tags)}`);
+
+        const deckData = {
+          id: row.id,
+          user_id: row.user_id,
+          name: row.name,
+          description: row.description,
+          language: row.language,
+          cover_image_url: row.cover_image_url,
+          is_active: Boolean(row.is_active),
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+          // Skip tags entirely for now to avoid PostgreSQL issues
+          // tags: tags,
+        };
+
+        return deckData;
+      });
+
+      if (uniqueDecks.length !== customDecks.length) {
+        console.log(`Removed ${customDecks.length - uniqueDecks.length} duplicate custom decks before sync`);
+      }
 
       // Upsert to Supabase
       const { error } = await supabase
@@ -218,10 +256,19 @@ export class SyncService {
         }
       }
 
+      // Remove duplicates by id before syncing
+      const uniqueDecksToSync = decksToSync.filter((deck, index, self) => 
+        index === self.findIndex(d => d.id === deck.id)
+      );
+
+      if (uniqueDecksToSync.length !== decksToSync.length) {
+        console.log(`Removed ${decksToSync.length - uniqueDecksToSync.length} duplicate user decks before sync`);
+      }
+
       // Upsert to Supabase
       const { error } = await supabase
         .from('user_decks')
-        .upsert(decksToSync);
+        .upsert(uniqueDecksToSync);
 
       if (error) throw error;
 

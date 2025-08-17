@@ -97,6 +97,7 @@ async function insertAndSyncFlashcard(userId: string, flashcard: CustomFlashcard
 export function useDeckManagement(user: User | null) {
   const [userDecks, setUserDecks] = useState<UserDeck[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Fix deck names on hook initialization
   React.useEffect(() => {
@@ -109,6 +110,7 @@ export function useDeckManagement(user: User | null) {
     if (!user) return;
 
     try {
+      setIsLoading(true);
       const localDecks = await localDatabase.getUserDecks(user.id);
 
       if (localDecks.length > 0) {
@@ -147,6 +149,8 @@ export function useDeckManagement(user: User | null) {
     } catch (error) {
       console.error('Error fetching user decks:', error);
       setUserDecks([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -245,6 +249,7 @@ export function useDeckManagement(user: User | null) {
   return {
     userDecks,
     refreshing,
+    isLoading,
     fetchUserDecks,
     onRefresh,
     removeDeck,

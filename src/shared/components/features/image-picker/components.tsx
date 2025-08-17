@@ -2,8 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Image,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import type { UnsplashImage } from "@/shared/services/unsplash";
+import { SkeletonView } from "@/shared/components/ui/Skeleton";
 
 export function SourceButton({
   disabled,
@@ -65,48 +66,147 @@ export function SearchBar({
   );
 }
 
+export function HistoryChips({
+  queries,
+  onSelect,
+  onClear,
+  onRemove,
+}: {
+  queries: string[];
+  onSelect: (q: string) => void;
+  onClear?: () => void;
+  onRemove?: (q: string) => void;
+}) {
+  if (!queries || queries.length === 0) return null;
+  return (
+    <View style={styles.historyContainer}>
+      <View style={styles.historyChips}>
+        {queries.map((q) => (
+          <View key={q} style={styles.chip}>
+            <TouchableOpacity style={styles.chipTextWrap} onPress={() => onSelect(q)}>
+              <Text style={styles.chipText} numberOfLines={1}>
+                {q.length > 30 ? `${q.slice(0, 27)}…` : q}
+              </Text>
+            </TouchableOpacity>
+            {onRemove ? (
+              <TouchableOpacity style={styles.chipClose} onPress={() => onRemove(q)} accessibilityLabel={`Usuń ${q} z historii`}>
+                <Ionicons name="close" size={12} color="#666" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ))}
+      </View>
+      {onClear ? (
+        <TouchableOpacity onPress={onClear} accessibilityLabel="Wyczyść historię">
+          <Text style={styles.clearHistoryText}>Wyczyść</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
+
 export function UnsplashGrid({
   images,
   size,
   onSelect,
   showLoading,
-  loadingText,
+  refreshing,
   onEnd,
+  onRefresh,
+  hasMore,
 }: {
   images: UnsplashImage[];
   size: number;
   onSelect: (img: UnsplashImage) => void;
   showLoading: boolean;
-  loadingText: string;
+  refreshing: boolean;
   onEnd: () => void;
+  onRefresh: () => void;
+  hasMore: boolean;
 }) {
+  const renderSkeleton = () => (
+    <View style={[styles.unsplashImage, { width: size, height: size }]}>
+      <SkeletonView style={styles.unsplashImageContent} />
+    </View>
+  );
+
+  const renderTile = ({ item }: { item: UnsplashImage }) => (
+    <UnsplashTile image={item} size={size} onSelect={onSelect} />
+  );
+
+  if (images.length === 0 && showLoading) {
+    const skeletons = Array.from({ length: 6 }, (_, i) => i);
+    return (
+      <FlatList
+        data={skeletons}
+        keyExtractor={(i) => `sk-${i}`}
+        renderItem={renderSkeleton}
+        numColumns={2}
+        columnWrapperStyle={styles.columnWrapper}
+        contentContainerStyle={styles.imagesContent}
+        showsVerticalScrollIndicator={false}
+      />
+    );
+  }
+
   return (
-    <ScrollView
-      style={styles.imagesContainer}
+    <FlatList
+      data={images}
+      keyExtractor={(img) => img.id}
+      renderItem={renderTile}
+      numColumns={2}
+      columnWrapperStyle={styles.columnWrapper}
+      contentContainerStyle={styles.imagesContent}
+      onEndReached={onEnd}
+      onEndReachedThreshold={0.5}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      ListFooterComponent={
+        images.length > 0 ? (
+          <View style={styles.loadingContainer}>
+            {showLoading && hasMore ? (
+              <>
+                <ActivityIndicator size="small" color="#007AFF" />
+                <Text style={styles.loadingText}>Ładowanie kolejnych zdjęć…</Text>
+              </>
+            ) : !hasMore ? (
+              <Text style={styles.loadingText}>Brak dalszych wyników</Text>
+            ) : null}
+          </View>
+        ) : null
+      }
       showsVerticalScrollIndicator={false}
-      onScrollEndDrag={onEnd}
+    />
+  );
+}
+
+function UnsplashTile({
+  image,
+  size,
+  onSelect,
+}: {
+  image: UnsplashImage;
+  size: number;
+  onSelect: (img: UnsplashImage) => void;
+}) {
+  const [loaded, setLoaded] = React.useState(false);
+  return (
+    <TouchableOpacity
+      style={[styles.unsplashImage, { width: size, height: size }]}
+      onPress={() => onSelect(image)}
+      activeOpacity={0.8}
     >
-      <View style={styles.imagesGrid}>
-        {images.map((image) => (
-          <TouchableOpacity
-            key={image.id}
-            style={[styles.unsplashImage, { width: size, height: size }]}
-            onPress={() => onSelect(image)}
-          >
-            <Image
-              source={{ uri: image.urls.thumb }}
-              style={styles.unsplashImageContent}
-            />
-          </TouchableOpacity>
-        ))}
-      </View>
-      {showLoading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>{loadingText}</Text>
+      {!loaded && (
+        <View style={styles.tileSkeletonOverlay}>
+          <SkeletonView style={styles.unsplashImageContent} />
         </View>
       )}
-    </ScrollView>
+      <Image
+        source={{ uri: image.urls.small_s3 || image.urls.small || image.urls.thumb }}
+        style={styles.unsplashImageContent}
+        onLoadEnd={() => setLoaded(true)}
+      />
+    </TouchableOpacity>
   );
 }
 
@@ -130,8 +230,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
@@ -146,15 +245,57 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   searchButton: { padding: 8 },
-  imagesContainer: { flex: 1 },
-  imagesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    padding: 16,
-  },
-  unsplashImage: { marginBottom: 8, borderRadius: 8, overflow: "hidden" },
+  imagesContent: { paddingTop: 12, paddingBottom: 4 },
+  columnWrapper: { justifyContent: 'space-between' },
+  unsplashImage: { marginBottom: 12, borderRadius: 8, overflow: "hidden" },
   unsplashImageContent: { width: "100%", height: "100%", resizeMode: "cover" },
+  tileSkeletonOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
+  },
+  historyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  historyChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    flex: 1,
+    paddingRight: 8,
+  },
+  chip: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingLeft: 10,
+    paddingRight: 6,
+    marginBottom: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  chipTextWrap: { paddingRight: 6 },
+  chipText: {
+    color: '#333',
+    fontSize: 12,
+  },
+  chipClose: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ECEFF3',
+    marginLeft: 2,
+  },
+  clearHistoryText: {
+    color: '#8E8E93',
+    fontSize: 12,
+  },
   loadingContainer: { padding: 20, alignItems: "center" },
   loadingText: { marginTop: 12, fontSize: 14, color: "#666" },
   disabledButton: { opacity: 0.5 },

@@ -1,63 +1,41 @@
-import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 
 import { TemplateDeckSelectionModal } from "@/shared/components/features/template-deck-selection";
 import { FloatingActionButton } from "@/shared/components/ui";
-
-import { useAppInitialization, useDeckManagement } from "@/shared/hooks";
+import { useDashboard } from "@/shared/hooks";
 import type { UserDeck } from "@/shared/types/flashcard";
 
 import { CustomDeckCreationModal } from "@/shared/components/features/custom-deck-creation";
 import { CustomFlashcardModal } from "@/shared/components/features/custom-flashcard";
-import { DeckCard, EmptyDeckState } from "@/shared/components/features/deck";
+import {
+  DeckCard,
+  DeckCardSkeleton,
+  EmptyDeckState,
+} from "@/shared/components/features/deck";
 import { FloatingActionMenu } from "@/shared/components/features/floating-action-menu";
 import { AppHeader } from "@/shared/components/ui";
-import { useAuthStore } from "@/store";
 
 export default function DashboardScreen() {
-  const { user } = useAuthStore();
-  const { isInitialized } = useAppInitialization(user);
   const {
     userDecks,
     refreshing,
-    fetchUserDecks,
+    showLoading,
+    showTemplateModal,
+    showCustomDeckModal,
+    showCustomFlashcardModal,
+    showActionMenu,
+    handleDeckPress,
+    handleFABPress,
+    handleCreateDeck,
+    handleCreateFlashcard,
+    handleBrowseTemplates,
     onRefresh,
+    modalHandlers,
     createCustomDeck,
     createCustomFlashcard,
-  } = useDeckManagement(user);
-
-  const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [showCustomDeckModal, setShowCustomDeckModal] = useState(false);
-  const [showCustomFlashcardModal, setShowCustomFlashcardModal] =
-    useState(false);
-  const [showActionMenu, setShowActionMenu] = useState(false);
-
-  // Load user decks when app is initialized
-  useEffect(() => {
-    if (isInitialized) {
-      fetchUserDecks();
-    }
-  }, [isInitialized]);
-
-  const handleDeckPress = (userDeck: UserDeck) => {
-    router.push(`/deck/${userDeck.id}`);
-  };
-
-  // FAB action handlers
-  const handleFABPress = () => setShowActionMenu(true);
-  const handleCreateDeck = () => {
-    setShowActionMenu(false);
-    setShowCustomDeckModal(true);
-  };
-  const handleCreateFlashcard = () => {
-    setShowActionMenu(false);
-    setShowCustomFlashcardModal(true);
-  };
-  const handleBrowseTemplates = () => {
-    setShowActionMenu(false);
-    setShowTemplateModal(true);
-  };
+    fetchUserDecks,
+  } = useDashboard();
 
   const renderDeckItem = ({ item }: { item: UserDeck }) => (
     <DeckCard item={item} onPress={handleDeckPress} />
@@ -67,52 +45,65 @@ export default function DashboardScreen() {
     <View style={styles.container}>
       <AppHeader title="Moja Nauka" showAddButton={false} />
 
-      <FlatList
-        data={userDecks}
-        renderItem={renderDeckItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.list,
-          userDecks.length === 0 && styles.emptyList,
-        ]}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={
-          <EmptyDeckState
-            onBrowseTemplates={() => setShowTemplateModal(true)}
+      {showLoading ? (
+        <FlatList
+          data={[1, 2, 3, 4]}
+          renderItem={() => <DeckCardSkeleton />}
+          keyExtractor={(item) => String(item)}
+          contentContainerStyle={[styles.list]}
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+        />
+      ) : (
+        <>
+          <FlatList
+            data={userDecks}
+            renderItem={renderDeckItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={[
+              styles.list,
+              userDecks.length === 0 && styles.emptyList,
+            ]}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            ListEmptyComponent={
+              <EmptyDeckState
+                onBrowseTemplates={modalHandlers.template.show}
+              />
+            }
+            showsVerticalScrollIndicator={false}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
-        }
-        showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-      />
 
-      <FloatingActionButton onPress={handleFABPress} />
+          <FloatingActionButton onPress={handleFABPress} />
 
-      <FloatingActionMenu
-        visible={showActionMenu}
-        onClose={() => setShowActionMenu(false)}
-        onCreateDeck={handleCreateDeck}
-        onCreateFlashcard={handleCreateFlashcard}
-        onBrowseTemplates={handleBrowseTemplates}
-      />
+          <FloatingActionMenu
+            visible={showActionMenu}
+            onClose={modalHandlers.actionMenu.hide}
+            onCreateDeck={handleCreateDeck}
+            onCreateFlashcard={handleCreateFlashcard}
+            onBrowseTemplates={handleBrowseTemplates}
+          />
+        </>
+      )}
 
       {/* Modals */}
       <TemplateDeckSelectionModal
         visible={showTemplateModal}
-        onClose={() => setShowTemplateModal(false)}
+        onClose={modalHandlers.template.hide}
         onDeckAdded={fetchUserDecks}
       />
 
       <CustomDeckCreationModal
         visible={showCustomDeckModal}
-        onClose={() => setShowCustomDeckModal(false)}
+        onClose={modalHandlers.customDeck.hide}
         onCreateDeck={createCustomDeck}
       />
 
       <CustomFlashcardModal
         visible={showCustomFlashcardModal}
-        onClose={() => setShowCustomFlashcardModal(false)}
+        onClose={modalHandlers.customFlashcard.hide}
         onCreateFlashcard={createCustomFlashcard}
         userDecks={userDecks}
       />

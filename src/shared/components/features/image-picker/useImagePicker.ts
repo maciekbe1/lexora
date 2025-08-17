@@ -1,5 +1,6 @@
 import * as ImagePicker from "expo-image-picker";
 import React from "react";
+import * as SecureStore from "expo-secure-store";
 import { Alert } from "react-native";
 import { storageService } from "@/shared/services/storage";
 import { unsplashService, type UnsplashImage } from "@/shared/services/unsplash";
@@ -11,6 +12,13 @@ export function useImagePicker(userId: string | undefined, onImageSelected: (url
   const [isLoading, setIsLoading] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
   const [currentPage, setCurrentPage] = React.useState(1);
+  // We compute hasMore from each response; no need to store totalPages
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [hasMore, setHasMore] = React.useState(true);
+  const loadMoreLock = React.useRef(false);
+  const [recentQueries, setRecentQueries] = React.useState<string[]>([]);
+  const HISTORY_KEY = "lexora_image_picker_history";
+  const [autoSearchEnabled, setAutoSearchEnabled] = React.useState(true);
 
   const requestPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -48,6 +56,7 @@ export function useImagePicker(userId: string | undefined, onImageSelected: (url
       const response = await unsplashService.getFlashcardPhotos("education");
       setUnsplashImages(response.results);
       setCurrentPage(1);
+      setHasMore(response.total_pages > 1 && response.results.length > 0);
     } catch (error) {
       Alert.alert("Błąd", "Nie udało się załadować zdjęć");
       console.error("Unsplash featured images error:", error);
@@ -60,10 +69,11 @@ export function useImagePicker(userId: string | undefined, onImageSelected: (url
     if (!query.trim()) { await loadFeaturedImages(); return; }
     setIsLoading(true);
     try {
-      const response = await unsplashService.searchPhotos(query, page, 20, "squarish");
+      const response = await unsplashService.searchPhotos(query, page, 24, "squarish");
       if (page === 1) setUnsplashImages(response.results);
       else setUnsplashImages((prev) => [...prev, ...response.results]);
       setCurrentPage(page);
+      setHasMore(page < response.total_pages && response.results.length > 0);
     } catch (error) {
       Alert.alert("Błąd", "Nie udało się wyszukać zdjęć");
       console.error("Unsplash search error:", error);
@@ -73,8 +83,30 @@ export function useImagePicker(userId: string | undefined, onImageSelected: (url
   }, [loadFeaturedImages]);
 
   const loadMoreImages = React.useCallback(() => {
-    if (!isLoading) searchUnsplash(searchQuery, currentPage + 1);
-  }, [isLoading, searchQuery, currentPage, searchUnsplash]);
+    if (isLoading || loadMoreLock.current || !hasMore) return;
+    loadMoreLock.current = true;
+    // Throttle subsequent calls slightly to avoid multiple triggers on Android
+    Promise.resolve(searchUnsplash(searchQuery, currentPage + 1))
+      .catch(() => {})
+      .finally(() => {
+        setTimeout(() => {
+          loadMoreLock.current = false;
+        }, 600);
+      });
+  }, [isLoading, searchQuery, currentPage, hasMore, searchUnsplash]);
+
+  const refreshImages = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      if (!searchQuery.trim()) {
+        await loadFeaturedImages();
+      } else {
+        await searchUnsplash(searchQuery, 1);
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }, [searchQuery, loadFeaturedImages, searchUnsplash]);
 
   const selectUnsplashImage = React.useCallback(async (image: UnsplashImage) => {
     if (!userId) return;
@@ -95,7 +127,71 @@ export function useImagePicker(userId: string | undefined, onImageSelected: (url
 
   const openModal = React.useCallback(() => { setModalVisible(true); if (unsplashImages.length === 0) loadFeaturedImages(); }, [unsplashImages.length, loadFeaturedImages]);
   const closeModal = React.useCallback(() => setModalVisible(false), []);
-  const submitSearch = React.useCallback(() => { searchUnsplash(searchQuery, 1); }, [searchQuery, searchUnsplash]);
+  // Debounced submit to avoid rapid repeated requests (Enter spam)
+  const submitTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const submitSearch = React.useCallback(() => {
+    if (submitTimer.current) clearTimeout(submitTimer.current);
+    submitTimer.current = setTimeout(() => {
+      searchUnsplash(searchQuery, 1);
+      const q = searchQuery.trim().slice(0, 30);
+      if (q.length >= 2) {
+        setRecentQueries((prev) => {
+          const next = [q, ...prev.filter((p) => p.toLowerCase() !== q.toLowerCase())].slice(0, 10);
+          SecureStore.setItemAsync(HISTORY_KEY, JSON.stringify(next)).catch(() => {});
+          return next;
+        });
+      }
+    }, 350);
+  }, [searchQuery, searchUnsplash]);
 
-  return { modalVisible, openModal, closeModal, unsplashImages, searchQuery, setSearchQuery, submitSearch, isLoading, isUploading, loadMoreImages, pickImageFromDevice, selectUnsplashImage } as const;
+  React.useEffect(() => () => { if (submitTimer.current) clearTimeout(submitTimer.current); }, []);
+
+  // Auto-search as user types (debounced). Clears to featured when empty.
+  const autoTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  React.useEffect(() => {
+    if (!autoSearchEnabled) return; // manual submit-only mode
+    if (autoTimer.current) clearTimeout(autoTimer.current);
+    autoTimer.current = setTimeout(() => {
+      const q = searchQuery.trim().slice(0, 30);
+      if (q.length === 0) {
+        loadFeaturedImages();
+      } else if (q.length >= 2) {
+        searchUnsplash(q, 1);
+      }
+    }, 450);
+    return () => { if (autoTimer.current) clearTimeout(autoTimer.current); };
+  }, [searchQuery, loadFeaturedImages, searchUnsplash, autoSearchEnabled]);
+
+  // Load recent queries on mount
+  React.useEffect(() => {
+    SecureStore.getItemAsync(HISTORY_KEY)
+      .then((val) => {
+        if (!val) return;
+        try {
+          const parsed = JSON.parse(val);
+          if (Array.isArray(parsed)) setRecentQueries(parsed.map((s) => String(s).slice(0, 30)).slice(0, 10));
+        } catch {}
+      })
+      .catch(() => {});
+  }, []);
+
+  const selectHistoryQuery = React.useCallback((q: string) => {
+    setSearchQuery(q);
+    searchUnsplash(q, 1);
+  }, [searchUnsplash]);
+
+  const clearHistory = React.useCallback(() => {
+    setRecentQueries([]);
+    SecureStore.deleteItemAsync(HISTORY_KEY).catch(() => {});
+  }, []);
+
+  const removeHistoryQuery = React.useCallback((q: string) => {
+    setRecentQueries((prev) => {
+      const next = prev.filter((p) => p.toLowerCase() !== q.toLowerCase());
+      SecureStore.setItemAsync(HISTORY_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
+
+  return { modalVisible, openModal, closeModal, unsplashImages, searchQuery, setSearchQuery, submitSearch, isLoading, isUploading, refreshing, hasMore, loadMoreImages, refreshImages, pickImageFromDevice, selectUnsplashImage, recentQueries, selectHistoryQuery, clearHistory, removeHistoryQuery, autoSearchEnabled, setAutoSearchEnabled } as const;
 }

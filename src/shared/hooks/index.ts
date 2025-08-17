@@ -1,4 +1,9 @@
 export * from './useAppInitialization';
 export * from './useDeckManagement';
 export * from './useFlashcardManagement';
-
+export * from './useDeferredLoading';
+export * from './useDashboard';
+export * from './useDeckDetail';
+export * from './useBaseModal';
+export * from './useModalAnimation';
+export * from './useModalGestures';

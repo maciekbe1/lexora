@@ -11,8 +11,9 @@ interface DeckCardProps {
 export function DeckCard({ item, onPress }: DeckCardProps) {
   // Use unified deck data with legacy fallbacks
   const deckName = item.deck_name || item.custom_name || "Talia bez nazwy";
-  const description = item.deck_description || "Brak opisu";
+  const description = item.deck_description && item.deck_description.trim() ? item.deck_description.trim() : "Brak opisu";
   const flashcardCount = item.deck_flashcard_count || 0;
+  
 
   return (
     <TouchableOpacity style={styles.deckCard} onPress={() => onPress(item)}>

@@ -1,2 +1,0 @@
-export { DeckEditModal } from "./DeckEditModal";
-

@@ -1,8 +1,8 @@
+import { ImagePickerComponent } from "@/shared/components/features/image-picker";
+import { BaseModal } from "@/shared/components/ui";
+import type { UserDeck } from "@/shared/types/flashcard";
 import React, { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
-import type { UserDeck } from "@/shared/types/flashcard";
-import { BaseModal } from "@/shared/components/ui";
-import { ImagePickerComponent } from "@/shared/components/features/image-picker";
 
 interface DeckEditModalProps {
   visible: boolean;
@@ -44,14 +44,9 @@ export function DeckEditModal({
       return;
     }
 
-    if (!description.trim()) {
-      Alert.alert("Błąd", "Opis talii jest wymagany");
-      return;
-    }
-
     setIsLoading(true);
     try {
-      await onSave({
+      onSave({
         name: name.trim(),
         description: description.trim(),
         language: language.trim() || "pl",
@@ -95,7 +90,7 @@ export function DeckEditModal({
       </View>
 
       <View style={styles.formGroup}>
-        <Text style={styles.label}>Opis talii *</Text>
+        <Text style={styles.label}>Opis talii (opcjonalnie)</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           value={description}

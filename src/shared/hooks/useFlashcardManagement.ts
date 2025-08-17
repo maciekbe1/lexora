@@ -33,12 +33,24 @@ async function deleteFlashcardResources(userId: string, flashcard: CustomFlashca
 }
 
 async function deleteDeckResources(userId: string, deck: UserDeck, flashcards: CustomFlashcard[]) {
+  console.log(`Starting deletion of deck ${deck.id} with ${flashcards.length} flashcards`);
+  
   for (const f of flashcards) {
+    console.log(`Deleting flashcard ${f.id}`);
     await deleteFlashcardResources(userId, f);
   }
+  
+  console.log(`Deleting deck cover image: ${deck.deck_cover_image_url}`);
   await deleteImageSafe(deck.deck_cover_image_url);
+  
+  console.log(`Clearing custom deck ${deck.id} from database`);
   await localDatabase.clearCustomDeck(deck.id);
-  await syncUser(userId);
+  
+  // Skip sync for now to prevent deck from being restored from remote
+  // console.log(`Syncing deletion to remote for user ${userId}`);
+  // await syncUser(userId);
+  
+  console.log(`Deck deletion completed for ${deck.id} (sync skipped)`);
 }
 
 function buildNewFlashcard(
@@ -75,6 +87,7 @@ export function useFlashcardManagement(user: User | null, deckId: string) {
   const [flashcards, setFlashcards] = useState<CustomFlashcard[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Load deck and flashcards
   const loadDeckData = async () => {
@@ -208,6 +221,24 @@ export function useFlashcardManagement(user: User | null, deckId: string) {
         deck_cover_image_url: deckData.coverImageUrl,
         deck_updated_at: new Date().toISOString(),
       };
+      
+      // If this is a custom deck, also update the custom_decks table
+      if (deck.is_custom) {
+        const updatedCustomDeck = {
+          id: deck.id,
+          user_id: user.id,
+          name: deckData.name,
+          description: deckData.description,
+          language: deckData.language,
+          cover_image_url: deckData.coverImageUrl,
+          tags: deck.deck_tags || [],
+          is_active: deck.deck_is_active ?? true,
+          created_at: deck.deck_created_at || deck.added_at,
+          updated_at: new Date().toISOString(),
+        };
+        await localDatabase.insertCustomDeck(updatedCustomDeck);
+      }
+      
       await upsertDeck(user.id, updatedDeck);
       await loadDeckData();
       Alert.alert("Sukces", "Talia została zaktualizowana!");
@@ -219,7 +250,11 @@ export function useFlashcardManagement(user: User | null, deckId: string) {
 
   // Delete deck with all content
   const handleDeleteDeck = async () => {
-    if (!user || !deck) return;
+    console.log('handleDeleteDeck called', { user: !!user, deck: !!deck, isDeleting });
+    if (!user || !deck || isDeleting) {
+      console.log('handleDeleteDeck early return', { user: !!user, deck: !!deck, isDeleting });
+      return;
+    }
 
     Alert.alert(
       "Usuń talię",
@@ -230,18 +265,37 @@ export function useFlashcardManagement(user: User | null, deckId: string) {
           text: "Usuń",
           style: "destructive",
           onPress: async () => {
+            console.log('User confirmed deck deletion');
             try {
-              if (!user || !deck) return;
+              if (!user || !deck) {
+                console.log('Missing user or deck for deletion', { user: !!user, deck: !!deck });
+                return;
+              }
+              
+              console.log('Setting isDeleting to true');
+              setIsDeleting(true);
+              
+              console.log('Starting deleteDeckResources');
+              // Delete deck resources BEFORE navigating back
               await deleteDeckResources(user.id, deck, flashcards);
-              Alert.alert("Sukces", "Talia została usunięta", [
-                {
-                  text: "OK",
-                  onPress: () => router.back(),
-                },
-              ]);
+              
+              console.log('Waiting 1 second for remote deletion to propagate');
+              // Wait for remote deletion to propagate
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              console.log('Navigating back to main screen');
+              // Navigate back after deletion is complete
+              router.back();
+              
+              console.log('Deck deletion successful, showing alert');
+              // Show success toast/alert without blocking navigation
+              Alert.alert("Sukces", "Talia została usunięta");
             } catch (error) {
               console.error("Error deleting deck:", error);
               Alert.alert("Błąd", "Nie udało się usunąć talii");
+            } finally {
+              console.log('Setting isDeleting to false');
+              setIsDeleting(false);
             }
           },
         },
@@ -259,6 +313,7 @@ export function useFlashcardManagement(user: User | null, deckId: string) {
     flashcards,
     refreshing,
     isLoading,
+    isDeleting,
     onRefresh,
     handleCreateFlashcard,
     handleUpdateFlashcard,

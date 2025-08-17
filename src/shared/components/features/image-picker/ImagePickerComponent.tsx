@@ -1,17 +1,24 @@
+import { useAuthStore } from "@/store";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   Dimensions,
   Image,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuthStore } from "@/store";
 
 import { BaseModal } from "@/shared/components/ui";
-import { SearchBar, SourceButton, UnsplashGrid } from "./components";
+import { SkeletonView } from "@/shared/components/ui/Skeleton";
+import {
+  HistoryChips,
+  SearchBar,
+  SourceButton,
+  UnsplashGrid,
+} from "./components";
 import { useImagePicker } from "./useImagePicker";
 
 export interface ImagePickerComponentProps {
@@ -36,28 +43,54 @@ export function ImagePickerComponent({
     submitSearch,
     isLoading,
     isUploading,
+    refreshing,
+    hasMore,
     loadMoreImages,
+    refreshImages,
     pickImageFromDevice,
     selectUnsplashImage,
+    recentQueries,
+    selectHistoryQuery,
+    clearHistory,
+    removeHistoryQuery,
+    autoSearchEnabled,
+    setAutoSearchEnabled,
   } = useImagePicker(user?.id, onImageSelected);
   const removeImage = () => onImageSelected("");
   const screenWidth = Dimensions.get("window").width;
-  const imageSize = (screenWidth - 48) / 2;
+  // BaseModal content has 20px horizontal padding on both sides.
+  // Grid now uses no extra horizontal padding; reserve a fixed gap between columns.
+  const CONTENT_PADDING = 20;
+  const COLUMN_GAP = 12;
+  const imageSize = Math.floor(
+    (screenWidth - CONTENT_PADDING * 2 - COLUMN_GAP) / 2
+  );
 
   return (
     <>
       <TouchableOpacity style={styles.container} onPress={openModal}>
         {imageUrl ? (
           <View style={styles.imageContainer}>
-            <Image source={{ uri: imageUrl }} style={styles.selectedImage} />
+            {!isUploading && (
+              <Image source={{ uri: imageUrl }} style={styles.selectedImage} />
+            )}
+            {isUploading && <SkeletonView style={styles.selectedImage} />}
             <TouchableOpacity style={styles.removeButton} onPress={removeImage}>
               <Ionicons name="close-circle" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.placeholderContainer}>
-            <Ionicons name="image-outline" size={32} color="#999" />
-            <Text style={styles.placeholderText}>{placeholder}</Text>
+            {isUploading ? (
+              <SkeletonView
+                style={{ width: "90%", height: 24, borderRadius: 6 }}
+              />
+            ) : (
+              <>
+                <Ionicons name="image-outline" size={32} color="#999" />
+                <Text style={styles.placeholderText}>{placeholder}</Text>
+              </>
+            )}
           </View>
         )}
       </TouchableOpacity>
@@ -66,6 +99,7 @@ export function ImagePickerComponent({
         visible={modalVisible}
         onClose={closeModal}
         title="Wybierz zdjęcie"
+        disableScroll={true}
       >
         <View style={styles.modalContainer}>
           <View style={styles.buttonRow}>
@@ -74,21 +108,37 @@ export function ImagePickerComponent({
               onPress={pickImageFromDevice}
               label={isUploading ? "Przesyłanie..." : "Z urządzenia"}
             />
+            <View style={styles.autoSearchToggle}>
+              <Text style={styles.autoLabel}>Auto-szukaj</Text>
+              <Switch
+                value={autoSearchEnabled}
+                onValueChange={setAutoSearchEnabled}
+              />
+            </View>
           </View>
           <SearchBar
             value={searchQuery}
             onChange={setSearchQuery}
             onSubmit={submitSearch}
           />
+
+          {!isLoading && recentQueries.length > 0 && (
+            <HistoryChips
+              queries={recentQueries}
+              onSelect={selectHistoryQuery}
+              onClear={clearHistory}
+              onRemove={removeHistoryQuery}
+            />
+          )}
           <UnsplashGrid
             images={unsplashImages}
             size={imageSize}
             onSelect={selectUnsplashImage}
             showLoading={isLoading || isUploading}
-            loadingText={
-              isUploading ? "Przesyłanie zdjęcia..." : "Ładowanie..."
-            }
+            refreshing={refreshing}
             onEnd={loadMoreImages}
+            onRefresh={refreshImages}
+            hasMore={hasMore}
           />
         </View>
       </BaseModal>
@@ -122,8 +172,12 @@ const styles = StyleSheet.create({
   modalContainer: { flex: 1, backgroundColor: "#fff" },
   buttonRow: {
     flexDirection: "row",
-    padding: 16,
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
+  autoSearchToggle: { flexDirection: "row", alignItems: "center", gap: 8 },
+  autoLabel: { fontSize: 12, color: "#666" },
 });

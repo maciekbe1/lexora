@@ -1,44 +1,47 @@
 import { CustomFlashcardModal } from "@/shared/components/features/custom-flashcard/CustomFlashcardModal";
-import { DeckEditModal } from "@/shared/components/features/deck-edit";
-import { DeckHeader } from "@/shared/components/features/deck/DeckHeader";
-import { DeckInfo } from "@/shared/components/features/deck/DeckInfo";
-import { EmptyFlashcardsState } from "@/shared/components/features/flashcards/EmptyFlashcardsState";
-import { FlashcardItem } from "@/shared/components/features/flashcards/FlashcardItem";
-import { useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
-import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
-import { useFlashcardManagement } from "@/shared/hooks";
+import {
+  DeckEditModal,
+  DeckHeader,
+  DeckHeaderSkeleton,
+  DeckInfo,
+  DeckInfoSkeleton,
+} from "@/shared/components/features/deck";
+import { DeckOptionsMenu } from "@/shared/components/features/deck-options-menu";
+import {
+  EmptyFlashcardsState,
+  FlashcardItem,
+  FlashcardItemSkeleton,
+} from "@/shared/components/features/flashcards";
+import { useDeckDetail } from "@/shared/hooks";
 import type { CustomFlashcard } from "@/shared/types/flashcard";
-import { useAuthStore } from "@/store";
+import React from "react";
+import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 
 export default function DeckDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { user } = useAuthStore();
-  const [showAddFlashcardModal, setShowAddFlashcardModal] = useState(false);
-  const [showEditDeckModal, setShowEditDeckModal] = useState(false);
-  const [editingFlashcard, setEditingFlashcard] =
-    useState<CustomFlashcard | null>(null);
-
-  // Use the custom hook for all deck and flashcard management
   const {
     deck,
     flashcards,
+    deckName,
+    deckDescription,
     refreshing,
-    isLoading,
+    showLoading,
+    isDeleting,
+    showAddFlashcardModal,
+    showEditDeckModal,
+    showOptionsMenu,
+    editingFlashcard,
     onRefresh,
-    handleCreateFlashcard,
-    handleUpdateFlashcard,
+    handleEditFlashcard,
+    handleAddFlashcard,
+    handleEditDeck,
     handleDeleteFlashcard,
-    handleUpdateDeck,
     handleDeleteDeck,
     handleStartStudy,
-  } = useFlashcardManagement(user, id!);
-
-  // Edit flashcard
-  const handleEditFlashcard = (flashcard: CustomFlashcard) => {
-    setEditingFlashcard(flashcard);
-    setShowAddFlashcardModal(true);
-  };
+    handleToggleOptionsMenu,
+    handleFlashcardSubmit,
+    handleUpdateDeck,
+    modalHandlers,
+  } = useDeckDetail();
 
   // Render flashcard item using the FlashcardItem component
   const renderFlashcardItem = ({
@@ -60,19 +63,22 @@ export default function DeckDetailScreen() {
   const renderEmptyState = () => (
     <EmptyFlashcardsState
       isCustomDeck={deck?.is_custom || false}
-      onAddFlashcard={() => setShowAddFlashcardModal(true)}
+      onAddFlashcard={modalHandlers.flashcard.show}
     />
   );
 
-  // Handle loading and error states
-  if (isLoading) {
+  if (showLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <DeckHeader
-          deckName="Ładowanie..."
-          flashcardCount={0}
-          isCustomDeck={false}
-          onAddFlashcard={() => {}}
+        <DeckHeaderSkeleton />
+        <DeckInfoSkeleton />
+        <FlatList
+          data={[1, 2, 3, 4, 5, 6]}
+          keyExtractor={(i) => String(i)}
+          renderItem={() => <FlashcardItemSkeleton />}
+          contentContainerStyle={[styles.list]}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          showsVerticalScrollIndicator={false}
         />
       </View>
     );
@@ -91,10 +97,6 @@ export default function DeckDetailScreen() {
     );
   }
 
-  // Extract deck information with legacy fallbacks
-  const deckName = deck.deck_name || deck.custom_name || "Talia bez nazwy";
-  const deckDescription = deck.deck_description || "Brak opisu";
-
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -102,9 +104,9 @@ export default function DeckDetailScreen() {
         deckName={deckName}
         flashcardCount={flashcards.length}
         isCustomDeck={deck.is_custom || false}
-        onAddFlashcard={() => setShowAddFlashcardModal(true)}
-        onEditDeck={() => setShowEditDeckModal(true)}
-        onDeleteDeck={handleDeleteDeck}
+        showOptionsMenu={showOptionsMenu}
+        onAddFlashcard={handleAddFlashcard}
+        onToggleOptions={handleToggleOptionsMenu}
       />
 
       {/* Deck Info and Study Button */}
@@ -135,15 +137,8 @@ export default function DeckDetailScreen() {
       {/* Add/Edit Flashcard Modal */}
       <CustomFlashcardModal
         visible={showAddFlashcardModal}
-        onClose={() => {
-          setShowAddFlashcardModal(false);
-          setEditingFlashcard(null);
-        }}
-        onCreateFlashcard={
-          editingFlashcard
-            ? (data) => handleUpdateFlashcard(data, editingFlashcard)
-            : handleCreateFlashcard
-        }
+        onClose={modalHandlers.flashcard.hide}
+        onCreateFlashcard={handleFlashcardSubmit}
         userDecks={deck ? [deck] : []} // Only show current deck
         preselectedDeckId={deck?.id}
         editingFlashcard={editingFlashcard}
@@ -152,9 +147,18 @@ export default function DeckDetailScreen() {
       {/* Edit Deck Modal */}
       <DeckEditModal
         visible={showEditDeckModal}
-        onClose={() => setShowEditDeckModal(false)}
+        onClose={modalHandlers.editDeck.hide}
         onSave={handleUpdateDeck}
         deck={deck}
+      />
+
+      {/* Deck Options Menu */}
+      <DeckOptionsMenu
+        visible={showOptionsMenu}
+        onClose={modalHandlers.optionsMenu.hide}
+        onEditDeck={handleEditDeck}
+        onDeleteDeck={handleDeleteDeck}
+        isDeleting={isDeleting}
       />
     </View>
   );

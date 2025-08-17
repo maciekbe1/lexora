@@ -1,3 +1,9 @@
+import {
+  SUPPORTED_LANGUAGES,
+  getLanguageName,
+} from "@/shared/constants/languages";
+import type { TemplateDeck } from "@/shared/types/flashcard";
+import { useAuthStore } from "@/store";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
@@ -8,12 +14,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { useAuthStore } from "@/store";
-import {
-  SUPPORTED_LANGUAGES,
-  getLanguageName,
-} from "@/shared/constants/languages";
-import type { TemplateDeck } from "@/shared/types/flashcard";
 
 import { BaseModal } from "@/shared/components/ui";
 import { LanguageTab } from "./LanguageTab";
@@ -50,7 +50,6 @@ export function TemplateDeckSelectionModal({
       onClose={onClose}
       title="Wybierz talię do nauki"
       disableScroll
-      showCancel={false}
     >
       <View style={styles.modalContainer}>
         <View style={styles.languageSelector}>

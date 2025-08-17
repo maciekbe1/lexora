@@ -9,6 +9,7 @@ export interface UnsplashImage {
     regular: string;
     small: string;
     thumb: string;
+    small_s3?: string;
   };
   user: {
     name: string;
@@ -48,7 +49,7 @@ class UnsplashService {
   async searchPhotos(
     query: string,
     page: number = 1,
-    perPage: number = 20,
+    perPage: number = 24,
     orientation: 'landscape' | 'portrait' | 'squarish' = 'landscape'
   ): Promise<UnsplashSearchResponse> {
     const params = new URLSearchParams({
@@ -64,7 +65,7 @@ class UnsplashService {
 
   async getFeaturedPhotos(
     page: number = 1,
-    perPage: number = 20,
+    perPage: number = 24,
     orientation: 'landscape' | 'portrait' | 'squarish' = 'landscape'
   ): Promise<UnsplashImage[]> {
     const params = new URLSearchParams({
@@ -115,7 +116,7 @@ class UnsplashService {
       travel: 'travel destination culture',
     };
 
-    return this.searchPhotos(queries[category], page, 12, 'squarish');
+    return this.searchPhotos(queries[category], page, 24, 'squarish');
   }
 }
 

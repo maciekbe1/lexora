@@ -175,30 +175,39 @@ export class LocalDatabase {
   private async fixExistingCustomDecks(db: SQLite.SQLiteDatabase): Promise<void> {
     try {
       console.log('Fixing existing custom decks with missing deck_name...');
-      
-      // Update user_decks where deck_name is NULL but custom_name exists
+
+      // Update user_decks where deck_name is NULL or "null" string but custom_name exists
       await db.execAsync(`
         UPDATE user_decks 
         SET deck_name = custom_name
-        WHERE is_custom = 1 AND deck_name IS NULL AND custom_name IS NOT NULL
+        WHERE is_custom = 1 AND (deck_name IS NULL OR deck_name = 'null') AND custom_name IS NOT NULL
       `);
       
       // Also update from custom_decks table if available
       await db.execAsync(`
         UPDATE user_decks 
         SET 
-          deck_name = COALESCE(deck_name, (
-            SELECT cd.name FROM custom_decks cd 
-            WHERE cd.id = user_decks.id AND user_decks.is_custom = 1
-          )),
-          deck_description = COALESCE(deck_description, (
-            SELECT cd.description FROM custom_decks cd 
-            WHERE cd.id = user_decks.id AND user_decks.is_custom = 1
-          )),
-          deck_language = COALESCE(deck_language, (
-            SELECT cd.language FROM custom_decks cd 
-            WHERE cd.id = user_decks.id AND user_decks.is_custom = 1
-          ))
+          deck_name = CASE 
+            WHEN deck_name IS NULL OR deck_name = 'null' THEN (
+              SELECT cd.name FROM custom_decks cd 
+              WHERE cd.id = user_decks.id AND user_decks.is_custom = 1
+            )
+            ELSE deck_name
+          END,
+          deck_description = CASE 
+            WHEN deck_description IS NULL OR deck_description = 'null' OR deck_description = '' THEN (
+              SELECT cd.description FROM custom_decks cd 
+              WHERE cd.id = user_decks.id AND user_decks.is_custom = 1
+            )
+            ELSE deck_description
+          END,
+          deck_language = CASE 
+            WHEN deck_language IS NULL OR deck_language = 'null' THEN (
+              SELECT cd.language FROM custom_decks cd 
+              WHERE cd.id = user_decks.id AND user_decks.is_custom = 1
+            )
+            ELSE deck_language
+          END
         WHERE is_custom = 1
       `);
       
@@ -214,6 +223,30 @@ export class LocalDatabase {
   async fixDeckNames(): Promise<void> {
     const db = await this.getDb();
     await this.fixExistingCustomDecks(db);
+    await this.fixDeckFlashcardCounts(db);
+  }
+
+  /**
+   * Fix flashcard counts for all custom decks
+   */
+  private async fixDeckFlashcardCounts(db: SQLite.SQLiteDatabase): Promise<void> {
+    try {
+      console.log('Fixing deck flashcard counts...');
+      
+      // Get all custom decks
+      const customDecks = await db.getAllAsync<{ id: string }>(
+        `SELECT id FROM user_decks WHERE is_custom = 1`
+      );
+      
+      // Update count for each deck
+      for (const deck of customDecks) {
+        await this.updateDeckFlashcardCount(deck.id);
+      }
+      
+      console.log(`Fixed flashcard counts for ${customDecks.length} custom decks`);
+    } catch (error) {
+      console.error('Error fixing deck flashcard counts:', error);
+    }
   }
 
   /**
@@ -222,6 +255,8 @@ export class LocalDatabase {
   async insertUserDeck(deck: UserDeck): Promise<void> {
     try {
       const db = await this.getDb();
+      
+      
       await db.runAsync(
         `INSERT OR REPLACE INTO user_decks 
          (id, user_id, template_deck_id, custom_name, is_favorite, is_custom, added_at, is_dirty,
@@ -238,7 +273,7 @@ export class LocalDatabase {
           deck.is_custom ? 1 : 0,
           deck.added_at,
           deck.deck_name || null,
-          deck.deck_description || '',
+          deck.deck_description || null,
           deck.deck_language || null,
           deck.deck_cover_image_url || '',
           JSON.stringify(deck.deck_tags || []),
@@ -312,8 +347,36 @@ export class LocalDatabase {
           flashcard.updated_at,
         ]
       );
+      // Update deck flashcard count
+      await this.updateDeckFlashcardCount(flashcard.user_deck_id);
     } catch (error) {
       console.error('Error inserting custom flashcard:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update deck flashcard count based on actual flashcard count
+   */
+  async updateDeckFlashcardCount(userDeckId: string): Promise<void> {
+    try {
+      const db = await this.getDb();
+      
+      // Count actual flashcards
+      const countResult = await db.getFirstAsync<{ count: number }>(
+        `SELECT COUNT(*) as count FROM custom_flashcards WHERE user_deck_id = ?`,
+        [userDeckId]
+      );
+      
+      const actualCount = countResult?.count || 0;
+      
+      // Update the user_decks table
+      await db.runAsync(
+        `UPDATE user_decks SET deck_flashcard_count = ? WHERE id = ?`,
+        [actualCount, userDeckId]
+      );
+    } catch (error) {
+      console.error('Error updating deck flashcard count:', error);
       throw error;
     }
   }
@@ -357,10 +420,11 @@ export class LocalDatabase {
           custom_deck_cover: row.deck_cover_image_url,
         };
         
-        // Debug log for checking deck names
-        if (result.is_custom) {
-          console.log(`Custom deck ${result.id}: deck_name="${result.deck_name}", custom_name="${result.custom_name}"`);
+        // Debug: only log if deck_name is still null/missing after fixes
+        if (result.is_custom && (!result.deck_name || result.deck_name === 'null')) {
+          console.log(`Custom deck ${result.id} still has invalid deck_name: "${result.deck_name}", custom_name: "${result.custom_name}"`);
         }
+        
         
         return result;
       });
@@ -418,6 +482,11 @@ export class LocalDatabase {
       const userDecks = await db.getAllAsync('SELECT * FROM user_decks WHERE is_dirty = 1');
       const customDecks = await db.getAllAsync('SELECT * FROM custom_decks WHERE is_dirty = 1');
       const customFlashcards = await db.getAllAsync('SELECT * FROM custom_flashcards WHERE is_dirty = 1');
+
+      // Debug: log custom decks tags to see what format they're in
+      customDecks.forEach((deck: any) => {
+        console.log(`Unsynced custom deck ${deck.id}: tags="${deck.tags}" (type: ${typeof deck.tags})`);
+      });
 
       return { userDecks, customDecks, customFlashcards };
     } catch (error) {
@@ -550,6 +619,12 @@ export class LocalDatabase {
     try {
       const db = await this.getDb();
       
+      // Get the user_deck_id before deleting to update count later
+      const flashcard = await db.getFirstAsync<{ user_deck_id: string }>(
+        'SELECT user_deck_id FROM custom_flashcards WHERE id = ?',
+        [flashcardId]
+      );
+      
       // First, try to sync deletion to remote before deleting locally
       try {
         const { error: deleteError } = await supabase
@@ -572,6 +647,11 @@ export class LocalDatabase {
         [flashcardId]
       );
       
+      // Update deck flashcard count if we had the flashcard's deck ID
+      if (flashcard?.user_deck_id) {
+        await this.updateDeckFlashcardCount(flashcard.user_deck_id);
+      }
+      
       console.log(`Cleared custom flashcard ${flashcardId} from local database`);
     } catch (error) {
       console.error('Error clearing custom flashcard:', error);
@@ -588,6 +668,8 @@ export class LocalDatabase {
       
       // First, try to sync deletion to remote before deleting locally
       try {
+        console.log(`Attempting to delete deck ${deckId} from remote database`);
+        
         const { error: deleteFlashcardsError } = await supabase
           .from('custom_flashcards')
           .delete()
@@ -595,6 +677,8 @@ export class LocalDatabase {
         
         if (deleteFlashcardsError) {
           console.log('Could not delete flashcards from remote:', deleteFlashcardsError);
+        } else {
+          console.log(`Successfully deleted flashcards for deck ${deckId} from remote`);
         }
 
         const { error: deleteCustomDeckError } = await supabase
@@ -604,6 +688,8 @@ export class LocalDatabase {
         
         if (deleteCustomDeckError) {
           console.log('Could not delete custom deck from remote:', deleteCustomDeckError);
+        } else {
+          console.log(`Successfully deleted custom deck ${deckId} from remote`);
         }
 
         const { error: deleteUserDeckError } = await supabase
@@ -613,31 +699,39 @@ export class LocalDatabase {
         
         if (deleteUserDeckError) {
           console.log('Could not delete user deck from remote:', deleteUserDeckError);
+        } else {
+          console.log(`Successfully deleted user deck ${deckId} from remote`);
         }
 
-        console.log(`Deleted deck ${deckId} from remote database`);
+        console.log(`Completed remote deletion attempt for deck ${deckId}`);
       } catch (error) {
         console.log('Could not sync deletion to remote (offline?):', error);
       }
       
       // Delete from local database regardless of remote sync result
-      await db.runAsync(
+      console.log(`Deleting flashcards for deck ${deckId}`);
+      const flashcardsResult = await db.runAsync(
         'DELETE FROM custom_flashcards WHERE user_deck_id = ?',
         [deckId]
       );
+      console.log(`Deleted ${flashcardsResult.changes} flashcards`);
       
-      await db.runAsync(
+      console.log(`Deleting custom deck record ${deckId}`);
+      const customDeckResult = await db.runAsync(
         'DELETE FROM custom_decks WHERE id = ?',
         [deckId]
       );
+      console.log(`Deleted ${customDeckResult.changes} custom deck records`);
       
-      await db.runAsync(
+      console.log(`Deleting user deck record ${deckId}`);
+      const userDeckResult = await db.runAsync(
         'DELETE FROM user_decks WHERE id = ?',
         [deckId]
       );
+      console.log(`Deleted ${userDeckResult.changes} user deck records`);
       
       console.log(`Cleared custom deck ${deckId} from local database`);
-    // eslint-disable-next-line max-lines
+     
     } catch (error) {
       console.error('Error clearing custom deck:', error);
       throw error;
