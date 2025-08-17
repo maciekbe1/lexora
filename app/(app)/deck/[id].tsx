@@ -16,8 +16,10 @@ import { useDeckDetail } from "@/shared/hooks";
 import type { CustomFlashcard } from "@/shared/types/flashcard";
 import React from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function DeckDetailScreen() {
+  const insets = useSafeAreaInsets();
   const {
     deck,
     flashcards,
@@ -76,7 +78,10 @@ export default function DeckDetailScreen() {
           data={[1, 2, 3, 4, 5, 6]}
           keyExtractor={(i) => String(i)}
           renderItem={() => <FlashcardItemSkeleton />}
-          contentContainerStyle={[styles.list]}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: insets.bottom + 16 },
+          ]}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           showsVerticalScrollIndicator={false}
         />

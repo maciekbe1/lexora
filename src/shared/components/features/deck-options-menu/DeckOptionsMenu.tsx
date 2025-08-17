@@ -47,7 +47,7 @@ export function DeckOptionsMenu({
     }).start();
   }, [translateY]);
 
-  const dismissWithAnimation = React.useCallback((afterClose?: () => void) => {
+  const dismissWithAnimation = React.useCallback((afterClose?: unknown) => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
     const distance = menuHeightRef.current > 0 ? menuHeightRef.current + 40 : 200;
@@ -61,9 +61,7 @@ export function DeckOptionsMenu({
       // Defer to the next frame to avoid scheduling updates during insertion
       requestAnimationFrame(() => {
         isClosingRef.current = false;
-        if (afterClose) {
-          afterClose();
-        }
+        if (typeof afterClose === 'function') (afterClose as () => void)();
       });
     });
   }, [onClose, translateY]);
@@ -112,7 +110,7 @@ export function DeckOptionsMenu({
     <View style={styles.overlay}>
       <TouchableOpacity
         style={styles.overlayBackground}
-        onPress={dismissWithAnimation}
+        onPress={() => dismissWithAnimation()}
       />
       <Animated.View
         style={[styles.optionsMenu, { transform: [{ translateY }] }]}
@@ -127,7 +125,7 @@ export function DeckOptionsMenu({
         >
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={dismissWithAnimation}
+            onPress={() => dismissWithAnimation()}
             hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
           >
             <View style={styles.dragIndicator} />
@@ -177,7 +175,7 @@ export function DeckOptionsMenu({
           <View style={styles.menuFooter}>
             <TouchableOpacity
               style={[styles.optionItem, styles.cancelAction]}
-              onPress={dismissWithAnimation}
+              onPress={() => dismissWithAnimation()}
             >
               <View style={[styles.optionIcon, styles.cancelIcon]}>
                 <Ionicons name="close" size={20} color="#666" />

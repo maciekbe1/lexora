@@ -1,10 +1,12 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SkeletonView } from '@/shared/components/ui/Skeleton';
 
 export function DeckHeaderSkeleton() {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.topRow}>
         <SkeletonView style={styles.backBtn} borderRadius={12} />
         <View style={styles.center}>
@@ -24,6 +26,8 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e1e8ed',
   },
   topRow: {
     flexDirection: 'row',
