@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Dimensions,
 } from "react-native";
 
 interface DeckOptionsMenuProps {
@@ -28,6 +29,7 @@ export function DeckOptionsMenu({
   isDeleting = false,
 }: DeckOptionsMenuProps) {
   const translateY = React.useRef(new Animated.Value(0)).current;
+  const backdropOpacity = React.useRef(new Animated.Value(0)).current;
   const menuHeightRef = React.useRef(0);
   const isClosingRef = React.useRef(false);
   
@@ -45,17 +47,30 @@ export function DeckOptionsMenu({
       mass: 1,
       stiffness: 120,
     }).start();
-  }, [translateY]);
+    backdropOpacity.setValue(0);
+    Animated.timing(backdropOpacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [translateY, backdropOpacity]);
 
   const dismissWithAnimation = React.useCallback((afterClose?: unknown) => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
     const distance = menuHeightRef.current > 0 ? menuHeightRef.current + 40 : 200;
-    Animated.timing(translateY, {
-      toValue: distance,
-      duration: 220,
-      useNativeDriver: true,
-    }).start(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: distance,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       onClose();
       // Run the follow-up action (e.g., open edit modal) after closing
       // Defer to the next frame to avoid scheduling updates during insertion
@@ -64,7 +79,7 @@ export function DeckOptionsMenu({
         if (typeof afterClose === 'function') (afterClose as () => void)();
       });
     });
-  }, [onClose, translateY]);
+  }, [onClose, translateY, backdropOpacity]);
 
   React.useEffect(() => {
     if (visible) {
@@ -79,6 +94,8 @@ export function DeckOptionsMenu({
       onPanResponderMove: (_evt, g) => {
         const dy = Math.max(0, g.dy);
         translateY.setValue(dy);
+        const screenHeight = Dimensions.get('window').height || 800;
+        backdropOpacity.setValue(Math.max(0, 1 - dy / screenHeight));
       },
       onPanResponderRelease: (_evt, g) => {
         const shouldDismiss = g.vy > DISMISS_VELOCITY || g.dy > DISMISS_DISTANCE;
@@ -108,10 +125,13 @@ export function DeckOptionsMenu({
 
   return (
     <View style={styles.overlay}>
-      <TouchableOpacity
-        style={styles.overlayBackground}
-        onPress={() => dismissWithAnimation()}
-      />
+      <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
+        <TouchableOpacity
+          style={styles.backdropTouch}
+          activeOpacity={1}
+          onPress={() => dismissWithAnimation()}
+        />
+      </Animated.View>
       <Animated.View
         style={[styles.optionsMenu, { transform: [{ translateY }] }]}
         onLayout={(e) => {
@@ -204,13 +224,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 1000,
   },
-  overlayBackground: {
+  backdrop: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  backdropTouch: {
+    flex: 1,
   },
   optionsMenu: {
     backgroundColor: "#fff",

@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Dimensions,
 } from "react-native";
 
 interface FloatingActionMenuProps {
@@ -28,6 +29,7 @@ export function FloatingActionMenu({
   onBrowseTemplates,
 }: FloatingActionMenuProps) {
   const translateY = React.useRef(new Animated.Value(0)).current;
+  const backdropOpacity = React.useRef(new Animated.Value(0)).current;
   const menuHeightRef = React.useRef(0);
   const isClosingRef = React.useRef(false);
   // Unified gesture thresholds (same as BaseModal)
@@ -44,18 +46,31 @@ export function FloatingActionMenu({
       mass: 1,
       stiffness: 120,
     }).start();
-  }, [translateY]);
+    backdropOpacity.setValue(0);
+    Animated.timing(backdropOpacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [translateY, backdropOpacity]);
 
   const dismissWithAnimation = React.useCallback(() => {
     if (isClosingRef.current) return;
     isClosingRef.current = true;
     const distance =
       menuHeightRef.current > 0 ? menuHeightRef.current + 40 : 260;
-    Animated.timing(translateY, {
-      toValue: distance,
-      duration: 220,
-      useNativeDriver: true,
-    }).start(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: distance,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       onClose();
       // Do not reset translateY here; parent will hide the menu.
       // Clear guard on next frame to avoid re-entrancy during unmount.
@@ -63,7 +78,7 @@ export function FloatingActionMenu({
         isClosingRef.current = false;
       });
     });
-  }, [onClose, translateY]);
+  }, [onClose, translateY, backdropOpacity]);
 
   React.useEffect(() => {
     if (visible) {
@@ -78,6 +93,8 @@ export function FloatingActionMenu({
       onPanResponderMove: (_evt, g) => {
         const dy = Math.max(0, g.dy);
         translateY.setValue(dy);
+        const screenHeight = Dimensions.get('window').height || 800;
+        backdropOpacity.setValue(Math.max(0, 1 - dy / screenHeight));
       },
       onPanResponderRelease: (_evt, g) => {
         const shouldDismiss =
@@ -96,10 +113,13 @@ export function FloatingActionMenu({
 
   return (
     <View style={styles.overlay}>
-      <TouchableOpacity
-        style={styles.overlayBackground}
-        onPress={dismissWithAnimation}
-      />
+      <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
+        <TouchableOpacity
+          style={styles.backdropTouch}
+          activeOpacity={1}
+          onPress={dismissWithAnimation}
+        />
+      </Animated.View>
       <Animated.View
         style={[styles.actionMenu, { transform: [{ translateY }] }]}
         onLayout={(e) => {
@@ -200,7 +220,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     alignItems: "center",
   },
-  overlayBackground: {
+  backdrop: {
     position: "absolute",
     top: 0,
     left: 0,
@@ -208,6 +228,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
+  backdropTouch: { flex: 1 },
   actionMenu: {
     backgroundColor: "#fff",
     borderTopLeftRadius: 20,
