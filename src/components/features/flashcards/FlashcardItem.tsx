@@ -1,6 +1,7 @@
 import type { CustomFlashcard } from "@/types/flashcard";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useAppTheme } from "@/theme/useAppTheme";
 
 interface FlashcardItemProps {
   flashcard: CustomFlashcard;
@@ -9,43 +10,44 @@ interface FlashcardItemProps {
 }
 
 export function FlashcardItem({ flashcard, index, onEdit }: FlashcardItemProps) {
+  const { colors } = useAppTheme();
   return (
     <TouchableOpacity
       activeOpacity={0.9}
       onPress={() => onEdit(flashcard)}
-      style={styles.flashcardItem}
+      style={[styles.flashcardItem, { backgroundColor: colors.surface }]}
     >
       <View style={styles.flashcardHeader}>
-        <Text style={styles.flashcardNumber}>#{index + 1}</Text>
+        <Text style={[styles.flashcardNumber, { color: colors.primary }]}>#{index + 1}</Text>
       </View>
 
       <View style={styles.flashcardContent}>
         <View style={styles.cardSide}>
-          <Text style={styles.sideLabel}>Przód:</Text>
+          <Text style={[styles.sideLabel, { color: colors.mutedText }]}>Przód:</Text>
           {flashcard.front_image_url ? (
             <Image
               source={{ uri: flashcard.front_image_url }}
               style={styles.cardImage}
             />
           ) : null}
-          <Text style={styles.cardText}>{flashcard.front_text}</Text>
+          <Text style={[styles.cardText, { color: colors.text }]}>{flashcard.front_text}</Text>
         </View>
 
         <View style={styles.cardSide}>
-          <Text style={styles.sideLabel}>Tył:</Text>
+          <Text style={[styles.sideLabel, { color: colors.mutedText }]}>Tył:</Text>
           {flashcard.back_image_url ? (
             <Image
               source={{ uri: flashcard.back_image_url }}
               style={styles.cardImage}
             />
           ) : null}
-          <Text style={styles.cardText}>{flashcard.back_text}</Text>
+          <Text style={[styles.cardText, { color: colors.text }]}>{flashcard.back_text}</Text>
         </View>
 
         {flashcard.hint_text ? (
           <View style={styles.cardSide}>
-            <Text style={styles.sideLabel}>Podpowiedź:</Text>
-            <Text style={styles.hintText}>{flashcard.hint_text}</Text>
+            <Text style={[styles.sideLabel, { color: colors.mutedText }]}>Podpowiedź:</Text>
+            <Text style={[styles.hintText, { color: colors.mutedText }]}>{flashcard.hint_text}</Text>
           </View>
         ) : null}
       </View>
@@ -55,7 +57,6 @@ export function FlashcardItem({ flashcard, index, onEdit }: FlashcardItemProps) 
 
 const styles = StyleSheet.create({
   flashcardItem: {
-    backgroundColor: "#ffffff",
     borderRadius: 12,
     padding: 16,
     shadowColor: "#000",
@@ -76,7 +77,6 @@ const styles = StyleSheet.create({
   flashcardNumber: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#007AFF",
   },
   // Removed separate action buttons; whole card is tappable
   flashcardContent: {
@@ -88,11 +88,9 @@ const styles = StyleSheet.create({
   sideLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#666",
   },
   cardText: {
     fontSize: 16,
-    color: "#1a1a1a",
     lineHeight: 22,
   },
   cardImage: {
@@ -103,7 +101,6 @@ const styles = StyleSheet.create({
   },
   hintText: {
     fontSize: 14,
-    color: "#666",
     fontStyle: "italic",
   },
 });

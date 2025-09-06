@@ -3,15 +3,8 @@ import { BaseModal } from "@/components/ui";
 import { SUPPORTED_LANGUAGES } from "@/constants/languages";
 import type { CustomDeck } from "@/types/flashcard";
 import React, { useState } from "react";
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useAppTheme } from "@/theme/useAppTheme";
 
 interface CustomDeckCreationModalProps {
   visible: boolean;
@@ -26,6 +19,7 @@ export function CustomDeckCreationModal({
   onClose,
   onCreateDeck,
 }: CustomDeckCreationModalProps) {
+  const { colors } = useAppTheme();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState<string>("en");
@@ -119,27 +113,27 @@ export function CustomDeckCreationModal({
         loading: isLoading,
       }}
     >
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.surface }]}>
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Nazwa talii *</Text>
+          <Text style={[styles.label, { color: colors.text }]}>Nazwa talii *</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
             value={name}
             onChangeText={setName}
             placeholder="np. Moje słówka hiszpańskie"
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.mutedText}
             maxLength={100}
           />
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Opis (opcjonalnie)</Text>
+          <Text style={[styles.label, { color: colors.text }]}>Opis (opcjonalnie)</Text>
           <TextInput
-            style={[styles.input, styles.textArea]}
+            style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
             value={description}
             onChangeText={setDescription}
             placeholder="Krótki opis talii..."
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.mutedText}
             multiline
             numberOfLines={3}
             maxLength={250}
@@ -149,7 +143,7 @@ export function CustomDeckCreationModal({
         {renderLanguageSelector()}
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Zdjęcie okładki (opcjonalnie)</Text>
+          <Text style={[styles.label, { color: colors.text }]}>Zdjęcie okładki (opcjonalnie)</Text>
           <ImagePickerComponent
             imageUrl={coverImageUrl}
             onImageSelected={setCoverImageUrl}
@@ -158,13 +152,13 @@ export function CustomDeckCreationModal({
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Tagi (opcjonalnie)</Text>
+          <Text style={[styles.label, { color: colors.text }]}>Tagi (opcjonalnie)</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
             value={tags}
             onChangeText={setTags}
             placeholder="np. podstawy, słówka, gramatyka"
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.mutedText}
             maxLength={200}
           />
           <Text style={styles.helper}>Oddziel tagi przecinkami</Text>
@@ -175,23 +169,20 @@ export function CustomDeckCreationModal({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1 },
   formGroup: {
     marginBottom: 24,
   },
   label: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#333",
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: "#f9f9f9",
   },
   textArea: {
     height: 80,

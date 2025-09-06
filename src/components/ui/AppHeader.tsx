@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAppTheme } from "@/theme/useAppTheme";
 
 interface AppHeaderProps {
   title: string;
@@ -32,6 +33,7 @@ export function AppHeader({
   refreshing = false,
   onRefreshPress,
 }: AppHeaderProps) {
+  const { colors } = useAppTheme();
   const [showAddModal, setShowAddModal] = useState(false);
   const insets = useSafeAreaInsets();
 
@@ -68,13 +70,13 @@ export function AppHeader({
 
   return (
     <>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
+      <StatusBar barStyle={Platform.OS === 'ios' ? 'default' : 'light-content'} />
+      <View style={[styles.headerContainer, { paddingTop: insets.top, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.header}>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
           {showAddButton ? (
             <TouchableOpacity style={styles.rightButton} onPress={handleAddPress}>
-              <Ionicons name="add" size={24} color="#007AFF" />
+              <Ionicons name="add" size={24} color={colors.primary} />
             </TouchableOpacity>
           ) : onRefreshPress ? (
             <TouchableOpacity
@@ -84,9 +86,9 @@ export function AppHeader({
               accessibilityLabel="Odśwież"
             >
               {refreshing ? (
-                <ActivityIndicator size="small" color="#007AFF" />
+                <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <Ionicons name="refresh" size={22} color="#007AFF" />
+                <Ionicons name="refresh" size={22} color={colors.primary} />
               )}
             </TouchableOpacity>
           ) : (
@@ -107,40 +109,40 @@ export function AppHeader({
           activeOpacity={1}
           onPress={() => setShowAddModal(false)}
         >
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Co chcesz dodać?</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Co chcesz dodać?</Text>
             </View>
 
             <TouchableOpacity
               style={styles.modalOption}
               onPress={() => handleModalOption(() => onAddFlashcard?.())}
             >
-              <Ionicons name="library" size={20} color="#007AFF" />
-              <Text style={styles.modalOptionText}>Dodaj Fiszkę</Text>
+              <Ionicons name="library" size={20} color={colors.primary} />
+              <Text style={[styles.modalOptionText, { color: colors.text }]}>Dodaj Fiszkę</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.modalOption}
               onPress={() => handleModalOption(() => onAddLesson?.())}
             >
-              <Ionicons name="book" size={20} color="#007AFF" />
-              <Text style={styles.modalOptionText}>Dodaj Lekcję</Text>
+              <Ionicons name="book" size={20} color={colors.primary} />
+              <Text style={[styles.modalOptionText, { color: colors.text }]}>Dodaj Lekcję</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.modalOption}
               onPress={() => handleModalOption(() => onSmartCreate?.())}
             >
-              <Ionicons name="bulb" size={20} color="#007AFF" />
-              <Text style={styles.modalOptionText}>Smart Tworzenie</Text>
+              <Ionicons name="bulb" size={20} color={colors.primary} />
+              <Text style={[styles.modalOptionText, { color: colors.text }]}>Smart Tworzenie</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.modalOption, styles.cancelOption]}
               onPress={() => setShowAddModal(false)}
             >
-              <Text style={styles.cancelOptionText}>Anuluj</Text>
+              <Text style={[styles.cancelOptionText, { color: colors.mutedText }]}>Anuluj</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

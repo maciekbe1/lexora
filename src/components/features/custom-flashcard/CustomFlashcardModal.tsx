@@ -1,6 +1,7 @@
 import type { CustomFlashcard, UserDeck } from "@/types/flashcard";
 import React from "react";
 import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import { useAppTheme } from "@/theme/useAppTheme";
 
 import { DeckSelector } from "@/components/features/deck";
 import { ImagePickerComponent } from "@/components/features/image-picker";
@@ -29,6 +30,7 @@ export function CustomFlashcardModal({
   editingFlashcard,
   onDeleteFlashcard,
 }: CustomFlashcardModalProps) {
+  const { colors } = useAppTheme();
   const params: UseCustomFlashcardFormParams = {
     visible,
     userDecks,
@@ -86,17 +88,17 @@ export function CustomFlashcardModal({
         <>
           <View style={styles.formGroup}>
             <View style={styles.labelRow}>
-              <Text style={styles.label}>Przód fiszki *</Text>
-              <View style={styles.langBadge}>
-                <Text style={styles.langText}>🇵🇱 PL</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Przód fiszki *</Text>
+              <View style={[styles.langBadge, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                <Text style={[styles.langText, { color: colors.text }]}>🇵🇱 PL</Text>
               </View>
             </View>
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               value={frontText}
               onChangeText={setFrontText}
               placeholder="np. Jak to powiedzieć po hiszpańsku?"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.mutedText}
               multiline
               numberOfLines={3}
               maxLength={500}
@@ -107,7 +109,7 @@ export function CustomFlashcardModal({
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Zdjęcie przodu (opcjonalnie)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Zdjęcie przodu (opcjonalnie)</Text>
             <ImagePickerComponent
               imageUrl={frontImageUrl}
               onImageSelected={(url) => {
@@ -119,10 +121,10 @@ export function CustomFlashcardModal({
 
           <View style={styles.formGroup}>
             <View style={styles.labelRow}>
-              <Text style={styles.label}>Tył fiszki *</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Tył fiszki *</Text>
               <View style={styles.rowRight}>
-                <View style={styles.langBadge}>
-                  <Text style={styles.langText}>
+                <View style={[styles.langBadge, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                  <Text style={[styles.langText, { color: colors.text }]}>
                     {`${getLanguageFlag(targetLang || "")} ${(targetLang || "??").toUpperCase()}`}
                   </Text>
                 </View>
@@ -156,14 +158,14 @@ export function CustomFlashcardModal({
               </View>
             )}
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               value={backText}
               onChangeText={(t) => {
                 markBackEdited();
                 setBackText(t);
               }}
               placeholder="np. Hola, ¿cómo estás?"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.mutedText}
               multiline
               numberOfLines={3}
               maxLength={500}
@@ -172,20 +174,18 @@ export function CustomFlashcardModal({
             />
             <View style={styles.rowBetween}>
               <Text style={styles.charCounter}>{backText.length}/500</Text>
-              {isTranslating && (
-                <Text style={styles.translatingHint}>Tłumaczę…</Text>
-              )}
+              {isTranslating && (<Text style={[styles.translatingHint, { color: colors.mutedText }]}>Tłumaczę…</Text>)}
             </View>
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Podpowiedź (opcjonalnie)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Podpowiedź (opcjonalnie)</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               value={hintText}
               onChangeText={setHintText}
               placeholder="np. Podstawowe powitanie"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.mutedText}
               maxLength={200}
               editable={true}
               autoCapitalize="sentences"

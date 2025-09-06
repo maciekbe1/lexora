@@ -1,10 +1,14 @@
 import { LanguagePreferencesModal } from "@/components/features/preferences/LanguagePreferencesModal";
+import { ThemePreferencesModal } from "@/components/features/preferences/ThemePreferencesModal";
 import { AppHeader } from "@/components/ui";
 import { getLanguageFlag, getLanguageName } from "@/constants/languages";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { useAuthStore } from "@/store";
+import { useThemeStore } from "@/store/theme";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useState } from "react";
+import { useAppTheme } from "@/theme/useAppTheme";
+import { ThemedSurface } from "@/theme/ThemedSurface";
 import {
   Alert,
   ScrollView,
@@ -28,11 +32,14 @@ interface SettingItem {
 
 // eslint-disable-next-line max-lines-per-function
 export default function SettingsScreen() {
+  const { colors, mode } = useAppTheme();
   const { user, signOut } = useAuthStore();
   const [notifications, setNotifications] = useState(true);
   const [dailyReminders, setDailyReminders] = useState(false);
   const [soundEffects, setSoundEffects] = useState(true);
   const { prefs, save } = useUserPreferences();
+  const themeStore = useThemeStore();
+  const [showTheme, setShowTheme] = useState(false);
   const [showPrefs, setShowPrefs] = useState(false);
 
   const handleSignOut = () => {
@@ -97,6 +104,19 @@ export default function SettingsScreen() {
       icon: "language",
       type: "action",
       onPress: () => setShowPrefs(true),
+    },
+    {
+      id: "theme",
+      title: "Motyw",
+      subtitle:
+        themeStore.mode === "system"
+          ? "Zgodnie z ustawieniami urządzenia"
+          : themeStore.mode === "light"
+            ? "Jasny"
+            : "Ciemny",
+      icon: "color-palette",
+      type: "action",
+      onPress: () => setShowTheme(true),
     },
 
     // Learning preferences
@@ -184,18 +204,27 @@ export default function SettingsScreen() {
   const renderSettingItem = (item: SettingItem) => (
     <TouchableOpacity
       key={item.id}
-      style={[styles.settingItem, item.type === "info" && styles.infoItem]}
+      style={[
+        styles.settingItem,
+        { borderBottomColor: colors.border },
+        item.type === "info" && [{ backgroundColor: colors.background }],
+      ]}
       onPress={item.onPress}
       disabled={item.type === "info"}
     >
       <View style={styles.settingLeft}>
-        <View style={styles.settingIcon}>
-          <Ionicons name={item.icon as any} size={22} color="#007AFF" />
+        <View
+          style={[
+            styles.settingIcon,
+            { backgroundColor: mode === 'dark' ? colors.background : '#E3F2FD' },
+          ]}
+        >
+          <Ionicons name={item.icon as any} size={22} color={colors.primary} />
         </View>
         <View style={styles.settingText}>
-          <Text style={styles.settingTitle}>{item.title}</Text>
+          <Text style={[styles.settingTitle, { color: colors.text }]}>{item.title}</Text>
           {item.subtitle && (
-            <Text style={styles.settingSubtitle}>{item.subtitle}</Text>
+            <Text style={[styles.settingSubtitle, { color: colors.mutedText }]}>{item.subtitle}</Text>
           )}
         </View>
       </View>
@@ -205,12 +234,12 @@ export default function SettingsScreen() {
           <Switch
             value={item.value}
             onValueChange={item.onToggle}
-            trackColor={{ false: "#f0f0f0", true: "#007AFF" }}
+            trackColor={{ false: colors.border, true: colors.primary }}
             thumbColor="#ffffff"
           />
         )}
         {item.type === "action" && (
-          <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+          <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
         )}
       </View>
     </TouchableOpacity>
@@ -227,29 +256,26 @@ export default function SettingsScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader title="Ustawienia" showAddButton={false} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.settingsContainer}>
+        <ThemedSurface style={styles.settingsContainer}>
           {settings.map(renderSettingItem)}
-        </View>
+        </ThemedSurface>
 
         {/* Sign Out Button */}
-        <View style={styles.signOutContainer}>
-          <TouchableOpacity
-            style={styles.signOutButton}
-            onPress={handleSignOut}
-          >
+        <ThemedSurface style={styles.signOutContainer}>
+          <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
             <Ionicons name="log-out" size={20} color="#FF3B30" />
-            <Text style={styles.signOutText}>Wyloguj się</Text>
+            <Text style={[styles.signOutText, { color: colors.text }]}>Wyloguj się</Text>
           </TouchableOpacity>
-        </View>
+        </ThemedSurface>
 
         {/* App Version */}
         <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>Lexora v1.0.0</Text>
-          <Text style={styles.versionSubtext}>
+          <Text style={[styles.versionText, { color: colors.mutedText }]}>Lexora v1.0.0</Text>
+          <Text style={[styles.versionSubtext, { color: colors.mutedText }]}>
             Zbudowano z ❤️ dla uczących się języków
           </Text>
         </View>
@@ -260,6 +286,16 @@ export default function SettingsScreen() {
           initialNative={prefs?.native_language || "pl"}
           initialTarget={prefs?.target_language || "en"}
           onSave={handleSavePrefs}
+        />
+
+        <ThemePreferencesModal
+          visible={showTheme}
+          onClose={() => setShowTheme(false)}
+          initialMode={themeStore.mode}
+          onSave={async (mode) => {
+            themeStore.setMode(mode);
+            return true;
+          }}
         />
       </ScrollView>
     </View>
@@ -275,7 +311,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   settingsContainer: {
-    backgroundColor: "#ffffff",
     marginTop: 20,
     marginHorizontal: 16,
     borderRadius: 12,
@@ -302,7 +337,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#E3F2FD",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -326,7 +360,6 @@ const styles = StyleSheet.create({
   signOutContainer: {
     marginTop: 32,
     marginHorizontal: 16,
-    backgroundColor: "#ffffff",
     borderRadius: 12,
     overflow: "hidden",
   },

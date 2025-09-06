@@ -12,6 +12,7 @@ import {
   View,
   Dimensions,
 } from "react-native";
+import { useAppTheme } from "@/theme/useAppTheme";
 
 interface FloatingActionMenuProps {
   visible: boolean;
@@ -28,6 +29,7 @@ export function FloatingActionMenu({
   onCreateFlashcard,
   onBrowseTemplates,
 }: FloatingActionMenuProps) {
+  const { colors, mode } = useAppTheme();
   const translateY = React.useRef(new Animated.Value(0)).current;
   const backdropOpacity = React.useRef(new Animated.Value(0)).current;
   const menuHeightRef = React.useRef(0);
@@ -121,7 +123,7 @@ export function FloatingActionMenu({
         />
       </Animated.View>
       <Animated.View
-        style={[styles.actionMenu, { transform: [{ translateY }] }]}
+        style={[styles.actionMenu, { transform: [{ translateY }] }, { backgroundColor: colors.surface }]}
         onLayout={(e) => {
           menuHeightRef.current = e.nativeEvent.layout.height;
         }}
@@ -136,7 +138,7 @@ export function FloatingActionMenu({
             onPress={dismissWithAnimation}
             hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
           >
-            <View style={styles.dragIndicator} />
+            <View style={[styles.dragIndicator, { backgroundColor: colors.border }]} />
           </TouchableOpacity>
         </View>
         <View style={styles.menuContent}>
@@ -146,59 +148,67 @@ export function FloatingActionMenu({
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
-            <TouchableOpacity style={styles.actionItem} onPress={onCreateDeck}>
+            <TouchableOpacity style={[styles.actionItem, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={onCreateDeck}>
               <View style={styles.actionIcon}>
-                <Ionicons name="library" size={24} color="#007AFF" />
+                <Ionicons name="library" size={24} color={colors.primary} />
               </View>
               <View style={styles.actionTextContainer}>
-                <Text style={styles.actionTitle}>Utwórz talię</Text>
-                <Text style={styles.actionSubtitle}>
+                <Text style={[styles.actionTitle, { color: colors.text }]}>Utwórz talię</Text>
+                <Text style={[styles.actionSubtitle, { color: colors.mutedText }]}>
                   Stwórz własną kolekcję fiszek
                 </Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.actionItem}
+              style={[styles.actionItem, { borderColor: colors.border, backgroundColor: colors.surface }]}
               onPress={onCreateFlashcard}
             >
               <View style={styles.actionIcon}>
                 <Ionicons name="card" size={24} color="#34C759" />
               </View>
               <View style={styles.actionTextContainer}>
-                <Text style={styles.actionTitle}>Dodaj fiszkę</Text>
-                <Text style={styles.actionSubtitle}>
+                <Text style={[styles.actionTitle, { color: colors.text }]}>Dodaj fiszkę</Text>
+                <Text style={[styles.actionSubtitle, { color: colors.mutedText }]}>
                   Dodaj fiszkę do istniejącej talii
                 </Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.actionItem}
+              style={[styles.actionItem, { borderColor: colors.border, backgroundColor: colors.surface }]}
               onPress={onBrowseTemplates}
             >
               <View style={styles.actionIcon}>
                 <Ionicons name="search" size={24} color="#FF9500" />
               </View>
               <View style={styles.actionTextContainer}>
-                <Text style={styles.actionTitle}>Przeglądaj talie</Text>
-                <Text style={styles.actionSubtitle}>
+                <Text style={[styles.actionTitle, { color: colors.text }]}>Przeglądaj talie</Text>
+                <Text style={[styles.actionSubtitle, { color: colors.mutedText }]}>
                   Wybierz z gotowych kolekcji
                 </Text>
               </View>
             </TouchableOpacity>
           </ScrollView>
 
-          <View style={styles.menuFooter}>
+          <View style={[styles.menuFooter, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
             <TouchableOpacity
-              style={[styles.actionItem, styles.cancelAction]}
+              style={[
+                styles.actionItem,
+                styles.cancelAction,
+                {
+                  backgroundColor:
+                    mode === 'dark' ? 'rgba(255,59,48,0.10)' : '#fff0f0',
+                  borderColor: mode === 'dark' ? colors.border : '#ffe0e0',
+                },
+              ]}
               onPress={dismissWithAnimation}
             >
               <View style={styles.actionIcon}>
                 <Ionicons name="close" size={24} color="#FF3B30" />
               </View>
               <View style={styles.actionTextContainer}>
-                <Text style={[styles.actionTitle, styles.cancelText]}>
+                <Text style={[styles.actionTitle, { color: colors.text }]}> 
                   Anuluj
                 </Text>
               </View>
@@ -252,6 +262,13 @@ const styles = StyleSheet.create({
   },
   menuContent: {
     maxHeight: "100%",
+  },
+  menuFooter: {
+    borderTopWidth: 1,
+    borderTopColor: '#e1e5e9',
+    paddingTop: 12,
+    paddingBottom: Platform.select({ ios: 16, android: 12, default: 12 }),
+    marginTop: 8,
   },
   menuScroll: {
     flexGrow: 0,

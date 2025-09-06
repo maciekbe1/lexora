@@ -1,13 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useAppTheme } from "@/theme/useAppTheme";
 import { router } from "expo-router";
 import React, { useState } from "react";
-import {
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface DeckHeaderProps {
@@ -26,6 +21,7 @@ export function DeckHeader({
   onToggleOptions,
 }: DeckHeaderProps) {
   const insets = useSafeAreaInsets();
+  const { colors } = useAppTheme();
   const [showOptions, setShowOptions] = useState(false);
 
   // Use external control if provided, otherwise use internal state
@@ -33,18 +29,18 @@ export function DeckHeader({
 
   return (
     <>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
+      <StatusBar barStyle={Platform.OS === 'ios' ? 'default' : 'light-content'} />
+      <View style={[styles.headerContainer, { paddingTop: insets.top, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={24} color="#007AFF" />
+            <Ionicons name="arrow-back" size={24} color={colors.primary} />
           </TouchableOpacity>
           <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>{deckName}</Text>
-            <Text style={styles.headerSubtitle}>{flashcardCount} fiszek</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>{deckName}</Text>
+            <Text style={[styles.headerSubtitle, { color: colors.mutedText }]}>{flashcardCount} fiszek</Text>
           </View>
           {isCustomDeck && (
             <View style={styles.rightActions}>
@@ -52,13 +48,13 @@ export function DeckHeader({
                 style={styles.actionButton}
                 onPress={onAddFlashcard}
               >
-                <Ionicons name="add" size={24} color="#007AFF" />
+                <Ionicons name="add" size={24} color={colors.primary} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionButton, styles.menuButton]}
                 onPress={toggleOptions}
               >
-                <Ionicons name="ellipsis-vertical" size={20} color="#007AFF" />
+                <Ionicons name="ellipsis-vertical" size={20} color={colors.primary} />
               </TouchableOpacity>
             </View>
           )}
@@ -69,11 +65,7 @@ export function DeckHeader({
 }
 
 const styles = StyleSheet.create({
-  headerContainer: {
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e1e8ed",
-  },
+  headerContainer: { borderBottomWidth: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -89,11 +81,9 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#1a1a1a",
   },
   headerSubtitle: {
     fontSize: 14,
-    color: "#666",
     marginTop: 2,
   },
   rightActions: {
@@ -105,9 +95,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   menuButton: {
-    backgroundColor: "#f0f8ff",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#007AFF",
   },
 });

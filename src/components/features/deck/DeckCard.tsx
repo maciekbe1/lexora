@@ -2,6 +2,7 @@ import { UserDeck } from "@/types/flashcard";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useAppTheme } from "@/theme/useAppTheme";
 
 interface DeckCardProps {
   item: UserDeck;
@@ -9,6 +10,7 @@ interface DeckCardProps {
 }
 
 export function DeckCard({ item, onPress }: DeckCardProps) {
+  const { colors } = useAppTheme();
   // Use unified deck data with legacy fallbacks
   const deckName = item.deck_name || item.custom_name || "Talia bez nazwy";
   const description =
@@ -18,15 +20,15 @@ export function DeckCard({ item, onPress }: DeckCardProps) {
   const flashcardCount = item.deck_flashcard_count || 0;
 
   return (
-    <TouchableOpacity style={styles.deckCard} onPress={() => onPress(item)}>
+    <TouchableOpacity style={[styles.deckCard, { backgroundColor: colors.surface }]} onPress={() => onPress(item)}>
       <View style={styles.deckHeader}>
         <View style={styles.deckIcon}>
-          <Ionicons name="library" size={24} color="#007AFF" />
+          <Ionicons name="library" size={24} color={colors.primary} />
         </View>
         <View style={styles.deckInfo}>
-          <Text style={styles.deckName}>{deckName}</Text>
-          <Text style={styles.deckDescription}>{description}</Text>
-          <Text style={styles.deckCount}>{flashcardCount} fiszek</Text>
+          <Text style={[styles.deckName, { color: colors.text }]}>{deckName}</Text>
+          <Text style={[styles.deckDescription, { color: colors.mutedText }]}>{description}</Text>
+          <Text style={[styles.deckCount, { color: colors.mutedText }]}>{flashcardCount} fiszek</Text>
         </View>
         {item.is_favorite && (
           <View style={styles.favoriteIcon}>
@@ -61,7 +63,6 @@ export function DeckCard({ item, onPress }: DeckCardProps) {
 
 const styles = StyleSheet.create({
   deckCard: {
-    backgroundColor: "#ffffff",
     borderRadius: 12,
     padding: 16,
     shadowColor: "#000",
@@ -96,17 +97,14 @@ const styles = StyleSheet.create({
   deckName: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#1a1a1a",
     marginBottom: 4,
   },
   deckDescription: {
     fontSize: 14,
-    color: "#666",
     marginBottom: 4,
   },
   deckCount: {
     fontSize: 12,
-    color: "#8E8E93",
   },
   deckStats: {
     flexDirection: "row",

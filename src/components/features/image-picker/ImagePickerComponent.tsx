@@ -1,4 +1,5 @@
 import { useAuthStore } from "@/store";
+import { useAppTheme } from "@/theme/useAppTheme";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
@@ -33,6 +34,7 @@ export function ImagePickerComponent({
   placeholder = "Dodaj zdjęcie",
 }: ImagePickerComponentProps) {
   const { user } = useAuthStore();
+  const { colors } = useAppTheme();
   const {
     modalVisible,
     openModal,
@@ -68,7 +70,7 @@ export function ImagePickerComponent({
 
   return (
     <>
-      <TouchableOpacity style={styles.container} onPress={openModal}>
+      <TouchableOpacity style={[styles.container]} onPress={openModal}>
         {imageUrl ? (
           <View style={styles.imageContainer}>
             {!isUploading && (
@@ -80,15 +82,28 @@ export function ImagePickerComponent({
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.placeholderContainer}>
+          <View
+            style={[
+              styles.placeholderContainer,
+              { borderColor: colors.border, backgroundColor: colors.surface },
+            ]}
+          >
             {isUploading ? (
               <SkeletonView
                 style={{ width: "90%", height: 24, borderRadius: 6 }}
               />
             ) : (
               <>
-                <Ionicons name="image-outline" size={32} color="#999" />
-                <Text style={styles.placeholderText}>{placeholder}</Text>
+                <Ionicons
+                  name="image-outline"
+                  size={32}
+                  color={colors.mutedText}
+                />
+                <Text
+                  style={[styles.placeholderText, { color: colors.mutedText }]}
+                >
+                  {placeholder}
+                </Text>
               </>
             )}
           </View>
@@ -101,7 +116,7 @@ export function ImagePickerComponent({
         title="Wybierz zdjęcie"
         disableScroll={true}
       >
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
           <View style={styles.buttonRow}>
             <SourceButton
               disabled={isUploading}
@@ -109,10 +124,11 @@ export function ImagePickerComponent({
               label={isUploading ? "Przesyłanie..." : "Z urządzenia"}
             />
             <View style={styles.autoSearchToggle}>
-              <Text style={styles.autoLabel}>Auto-szukaj</Text>
+              <Text style={[styles.autoLabel, { color: colors.mutedText }]}>Auto-szukaj</Text>
               <Switch
                 value={autoSearchEnabled}
                 onValueChange={setAutoSearchEnabled}
+                trackColor={{ false: colors.border, true: colors.primary }}
               />
             </View>
           </View>

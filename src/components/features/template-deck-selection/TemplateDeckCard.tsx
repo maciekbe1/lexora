@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useAppTheme } from "@/theme/useAppTheme";
 
 const getDifficultyColor = (level: number) => {
   switch (level) {
@@ -54,19 +55,20 @@ export function TemplateDeckCard({
   isAdding: boolean;
   onAdd: () => void;
 }) {
+  const { colors } = useAppTheme();
   return (
-    <View style={styles.deckCard}>
+    <View style={[styles.deckCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.deckHeader}>
         <View style={styles.deckIcon}>
-          <Ionicons name="library" size={24} color="#007AFF" />
+          <Ionicons name="library" size={24} color={colors.primary} />
         </View>
         <View style={styles.deckInfo}>
-          <Text style={styles.deckName}>{item.name}</Text>
-          <Text style={styles.deckDescription}>
+          <Text style={[styles.deckName, { color: colors.text }]}>{item.name}</Text>
+          <Text style={[styles.deckDescription, { color: colors.mutedText }] }>
             {item.description || "Brak opisu"}
           </Text>
           <View style={styles.deckMeta}>
-            <Text style={styles.deckCount}>{item.flashcard_count} fiszek</Text>
+            <Text style={[styles.deckCount, { color: colors.mutedText }]}>{item.flashcard_count} fiszek</Text>
             <View
               style={[
                 styles.difficultyBadge,
@@ -81,12 +83,12 @@ export function TemplateDeckCard({
           {item.tags.length > 0 && (
             <View style={styles.tagsContainer}>
               {item.tags.slice(0, 3).map((tag, index) => (
-                <View key={index} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag}</Text>
+                <View key={index} style={[styles.tag, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }] }>
+                  <Text style={[styles.tagText, { color: colors.mutedText }]}>{tag}</Text>
                 </View>
               ))}
               {item.tags.length > 3 && (
-                <Text style={styles.moreTagsText}>+{item.tags.length - 3}</Text>
+                <Text style={[styles.moreTagsText, { color: colors.mutedText }]}>+{item.tags.length - 3}</Text>
               )}
             </View>
           )}
@@ -170,15 +172,14 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   tag: {
-    backgroundColor: "#f0f0f0",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
     marginRight: 6,
     marginBottom: 4,
   },
-  tagText: { fontSize: 10, color: "#666" },
-  moreTagsText: { fontSize: 10, color: "#8E8E93", fontStyle: "italic" },
+  tagText: { fontSize: 10 },
+  moreTagsText: { fontSize: 10, fontStyle: "italic" },
   addButton: {
     flexDirection: "row",
     alignItems: "center",

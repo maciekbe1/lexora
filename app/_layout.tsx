@@ -1,13 +1,15 @@
 import { EdgeBackGesture } from "@/components/EdgeBackGesture";
-import { LoadingScreen } from "@/components/ui";
-import { useAppStore, useAuthStore } from "@/store";
-import { usePreferencesStore } from "@/store";
 import { LanguagePreferencesModal } from "@/components/features/preferences/LanguagePreferencesModal";
-import { useState, useEffect } from "react";
+import { LoadingScreen } from "@/components/ui";
+import { useTheme } from "@/hooks/useTheme";
+import { useAppStore, useAuthStore, usePreferencesStore } from "@/store";
 import { Stack, useRouter, useSegments } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useState } from "react";
 import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { ThemedContainer } from "@/theme/ThemedContainer";
 
 export default function RootLayout() {
   const { user, loading, initialize } = useAuthStore();
@@ -15,8 +17,16 @@ export default function RootLayout() {
   const router = useRouter();
   const { initializing, initializedForUserId, initializeIfNeeded } =
     useAppStore();
+  const { effective } = useTheme();
   const prefsStore = usePreferencesStore();
-  const { nativeLanguage, targetLanguage, hasServerRecord, loadFromServer, saveToServer, initDefaults } = prefsStore;
+  const {
+    nativeLanguage,
+    targetLanguage,
+    hasServerRecord,
+    loadFromServer,
+    saveToServer,
+    initDefaults,
+  } = prefsStore;
   const [showLangPrefs, setShowLangPrefs] = useState(false);
 
   // Initialize auth on app start
@@ -85,6 +95,8 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <StatusBar style={effective === "dark" ? "light" : "dark"} />
+        <ThemedContainer>
         <EdgeBackGesture>
           <Stack
             screenOptions={{
@@ -116,6 +128,7 @@ export default function RootLayout() {
             />
           )}
         </EdgeBackGesture>
+        </ThemedContainer>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

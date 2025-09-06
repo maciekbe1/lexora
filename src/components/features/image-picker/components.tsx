@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useAppTheme } from "@/theme/useAppTheme";
 
 export function SourceButton({
   disabled,
@@ -22,18 +23,29 @@ export function SourceButton({
   onPress: () => void;
   label: string;
 }) {
+  const { colors } = useAppTheme();
   return (
     <TouchableOpacity
-      style={[styles.sourceButton, disabled && styles.disabledButton]}
+      style={[
+        styles.sourceButton,
+        { borderColor: colors.primary },
+        disabled && styles.disabledButton,
+      ]}
       onPress={onPress}
       disabled={disabled}
     >
       <Ionicons
         name="phone-portrait"
         size={20}
-        color={disabled ? "#999" : "#007AFF"}
+        color={disabled ? colors.mutedText : colors.primary}
       />
-      <Text style={[styles.sourceButtonText, disabled && styles.disabledText]}>
+      <Text
+        style={[
+          styles.sourceButtonText,
+          { color: colors.primary },
+          disabled && { color: colors.mutedText },
+        ]}
+      >
         {label}
       </Text>
     </TouchableOpacity>
@@ -49,18 +61,28 @@ export function SearchBar({
   onChange: (t: string) => void;
   onSubmit: () => void;
 }) {
+  const { colors } = useAppTheme();
   return (
-    <View style={styles.searchContainer}>
+    <View
+      style={[
+        styles.searchContainer,
+        { borderBottomColor: colors.border },
+      ]}
+    >
       <TextInput
-        style={styles.searchInput}
+        style={[
+          styles.searchInput,
+          { borderColor: colors.border, color: colors.text },
+        ]}
         placeholder="Szukaj zdjęć..."
+        placeholderTextColor={colors.mutedText}
         value={value}
         onChangeText={onChange}
         onSubmitEditing={onSubmit}
         returnKeyType="search"
       />
       <TouchableOpacity style={styles.searchButton} onPress={onSubmit}>
-        <Ionicons name="search" size={20} color="#007AFF" />
+        <Ionicons name="search" size={20} color={colors.primary} />
       </TouchableOpacity>
     </View>
   );
@@ -77,27 +99,34 @@ export function HistoryChips({
   onClear?: () => void;
   onRemove?: (q: string) => void;
 }) {
+  const { colors } = useAppTheme();
   if (!queries || queries.length === 0) return null;
   return (
     <View style={styles.historyContainer}>
       <View style={styles.historyChips}>
         {queries.map((q) => (
-          <View key={q} style={styles.chip}>
+          <View
+            key={q}
+            style={[
+              styles.chip,
+              { backgroundColor: colors.background, borderColor: colors.border },
+            ]}
+          >
             <TouchableOpacity
               style={styles.chipTextWrap}
               onPress={() => onSelect(q)}
             >
-              <Text style={styles.chipText} numberOfLines={1}>
+              <Text style={[styles.chipText, { color: colors.text }]} numberOfLines={1}>
                 {q.length > 30 ? `${q.slice(0, 27)}…` : q}
               </Text>
             </TouchableOpacity>
             {onRemove ? (
               <TouchableOpacity
-                style={styles.chipClose}
+                style={[styles.chipClose, { backgroundColor: colors.border }]}
                 onPress={() => onRemove(q)}
                 accessibilityLabel={`Usuń ${q} z historii`}
               >
-                <Ionicons name="close" size={12} color="#666" />
+                <Ionicons name="close" size={12} color={colors.mutedText} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -108,7 +137,7 @@ export function HistoryChips({
           onPress={onClear}
           accessibilityLabel="Wyczyść historię"
         >
-          <Text style={styles.clearHistoryText}>Wyczyść</Text>
+          <Text style={[styles.clearHistoryText, { color: colors.mutedText }]}>Wyczyść</Text>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -134,6 +163,7 @@ export function UnsplashGrid({
   onRefresh: () => void;
   hasMore: boolean;
 }) {
+  const { colors } = useAppTheme();
   const renderSkeleton = () => (
     <View style={[styles.unsplashImage, { width: size, height: size }]}>
       <SkeletonView style={styles.unsplashImageContent} />
@@ -176,13 +206,13 @@ export function UnsplashGrid({
           <View style={styles.loadingContainer}>
             {showLoading && hasMore ? (
               <>
-                <ActivityIndicator size="small" color="#007AFF" />
-                <Text style={styles.loadingText}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[styles.loadingText, { color: colors.mutedText }]}>
                   Ładowanie kolejnych zdjęć…
                 </Text>
               </>
             ) : !hasMore ? (
-              <Text style={styles.loadingText}>Brak dalszych wyników</Text>
+              <Text style={[styles.loadingText, { color: colors.mutedText }]}>Brak dalszych wyników</Text>
             ) : null}
           </View>
         ) : null

@@ -12,6 +12,7 @@ import {
   View,
   Dimensions,
 } from "react-native";
+import { useAppTheme } from "@/theme/useAppTheme";
 
 interface DeckOptionsMenuProps {
   visible: boolean;
@@ -28,6 +29,7 @@ export function DeckOptionsMenu({
   onDeleteDeck,
   isDeleting = false,
 }: DeckOptionsMenuProps) {
+  const { colors } = useAppTheme();
   const translateY = React.useRef(new Animated.Value(0)).current;
   const backdropOpacity = React.useRef(new Animated.Value(0)).current;
   const menuHeightRef = React.useRef(0);
@@ -133,7 +135,7 @@ export function DeckOptionsMenu({
         />
       </Animated.View>
       <Animated.View
-        style={[styles.optionsMenu, { transform: [{ translateY }] }]}
+        style={[styles.optionsMenu, { transform: [{ translateY }] }, { backgroundColor: colors.surface }]}
         onLayout={(e) => {
           menuHeightRef.current = e.nativeEvent.layout.height;
         }}
@@ -153,22 +155,22 @@ export function DeckOptionsMenu({
         </View>
 
         <View style={styles.menuContent}>
-          <Text style={styles.menuTitle}>Opcje talii</Text>
+          <Text style={[styles.menuTitle, { color: colors.text }]}>Opcje talii</Text>
           
-          <TouchableOpacity style={styles.optionItem} onPress={handleEditDeck}>
-            <View style={[styles.optionIcon, styles.editIcon]}>
-              <Ionicons name="pencil" size={20} color="#007AFF" />
+          <TouchableOpacity style={[styles.optionItem, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={handleEditDeck}>
+            <View style={[styles.optionIcon, { backgroundColor: colors.surface }]}>
+              <Ionicons name="pencil" size={20} color={colors.primary} />
             </View>
             <View style={styles.optionTextContainer}>
-              <Text style={styles.optionTitle}>Edytuj talię</Text>
-              <Text style={styles.optionSubtitle}>
+              <Text style={[styles.optionTitle, { color: colors.text }]}>Edytuj talię</Text>
+              <Text style={[styles.optionSubtitle, { color: colors.mutedText }]}>
                 Zmień nazwę, opis lub okładkę
               </Text>
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.optionItem, styles.deleteOption]} 
+            style={[styles.optionItem, styles.deleteOption]}
             onPress={handleDeleteDeck}
             disabled={isDeleting}
           >
@@ -201,7 +203,7 @@ export function DeckOptionsMenu({
                 <Ionicons name="close" size={20} color="#666" />
               </View>
               <View style={styles.optionTextContainer}>
-                <Text style={[styles.optionTitle, styles.cancelText]}>
+                <Text style={[styles.optionTitle, { color: colors.text }]}>
                   Anuluj
                 </Text>
               </View>

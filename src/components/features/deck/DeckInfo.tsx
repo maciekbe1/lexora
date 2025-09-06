@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useAppTheme } from "@/theme/useAppTheme";
 
 interface DeckInfoProps {
   deckDescription: string;
@@ -15,18 +16,19 @@ export function DeckInfo({
   flashcardCount,
   onStartStudy,
 }: DeckInfoProps) {
+  const { colors } = useAppTheme();
   return (
     <>
       {/* Deck Info */}
-      <View style={styles.deckInfo}>
-        <Text style={styles.deckDescription}>{deckDescription}</Text>
+      <View style={[styles.deckInfo, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.deckDescription, { color: colors.text }]}>{deckDescription}</Text>
         {deckLanguage && (
-          <Text style={styles.deckLanguage}>Język: {deckLanguage}</Text>
+          <Text style={[styles.deckLanguage, { color: colors.mutedText }]}>Język: {deckLanguage}</Text>
         )}
       </View>
 
       {/* Study Button */}
-      <TouchableOpacity style={styles.studyButton} onPress={onStartStudy}>
+      <TouchableOpacity style={[styles.studyButton, { backgroundColor: colors.primary }]} onPress={onStartStudy}>
         <Ionicons name="play" size={20} color="#fff" />
         <Text style={styles.studyButtonText}>
           Rozpocznij naukę {flashcardCount > 0 && `(${flashcardCount})`}
@@ -39,24 +41,20 @@ export function DeckInfo({
 const styles = StyleSheet.create({
   deckInfo: {
     padding: 16,
-    backgroundColor: "#fff",
     marginBottom: 8,
   },
   deckDescription: {
     fontSize: 16,
-    color: "#333",
     lineHeight: 22,
   },
   deckLanguage: {
     fontSize: 14,
-    color: "#666",
     marginTop: 8,
   },
   studyButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#007AFF",
     marginHorizontal: 16,
     marginBottom: 16,
     paddingVertical: 14,

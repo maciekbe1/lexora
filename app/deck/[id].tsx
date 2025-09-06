@@ -16,9 +16,11 @@ import { useDeckDetail } from "@/hooks/useDeckDetail";
 import type { CustomFlashcard } from "@/types/flashcard";
 import React from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import { useAppTheme } from "@/theme/useAppTheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function DeckDetailScreen() {
+  const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
   const {
     deck,
@@ -66,7 +68,7 @@ export default function DeckDetailScreen() {
 
   if (showLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <DeckHeaderSkeleton />
         <DeckInfoSkeleton />
         <FlatList
@@ -98,7 +100,7 @@ export default function DeckDetailScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <DeckHeader
         deckName={deckName}
@@ -167,15 +169,12 @@ export default function DeckDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
   },
   errorContainer: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
   },
   list: {
     padding: 16,

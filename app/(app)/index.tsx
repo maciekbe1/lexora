@@ -1,5 +1,6 @@
 import React from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import { useAppTheme } from "@/theme/useAppTheme";
 
 import { TemplateDeckSelectionModal } from "@/components/features/template-deck-selection";
 import { FloatingActionButton } from "@/components/ui";
@@ -17,6 +18,7 @@ import { FloatingActionMenu } from "@/components/features/floating-action-menu";
 import { AppHeader } from "@/components/ui";
 
 export default function DashboardScreen() {
+  const { colors } = useAppTheme();
   const {
     userDecks,
     refreshing,
@@ -43,7 +45,7 @@ export default function DashboardScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader title="Moja Nauka" showAddButton={false} />
 
       {showLoading ? (
@@ -69,8 +71,8 @@ export default function DashboardScreen() {
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                tintColor="#007AFF"
-                colors={["#007AFF"]}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
                 progressBackgroundColor="#ffffff"
               />
             }
@@ -120,7 +122,6 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
   },
   list: {
     padding: 16,

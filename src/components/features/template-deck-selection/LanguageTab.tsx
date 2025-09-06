@@ -1,6 +1,7 @@
 import type { Language } from "@/types/flashcard";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity } from "react-native";
+import { useAppTheme } from "@/theme/useAppTheme";
 
 export function LanguageTab({
   item,
@@ -11,14 +12,23 @@ export function LanguageTab({
   selected: boolean;
   onSelect: (code: string) => void;
 }) {
+  const { colors } = useAppTheme();
   return (
     <TouchableOpacity
-      style={[styles.languageTab, selected && styles.languageTabSelected]}
+      style={[
+        styles.languageTab,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+        selected && { backgroundColor: colors.primary, borderColor: colors.primary },
+      ]}
       onPress={() => onSelect(item.code)}
     >
       <Text style={styles.languageFlag}>{item.flag}</Text>
       <Text
-        style={[styles.languageName, selected && styles.languageNameSelected]}
+        style={[
+          styles.languageName,
+          { color: colors.mutedText },
+          selected && { color: '#fff' },
+        ]}
       >
         {item.name}
       </Text>
@@ -34,15 +44,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginRight: 12,
     borderRadius: 20,
-    backgroundColor: "#f8f9fa",
     borderWidth: 1,
-    borderColor: "#e1e5e9",
-  },
-  languageTabSelected: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
   },
   languageFlag: { fontSize: 16, marginRight: 6 },
-  languageName: { fontSize: 14, fontWeight: "500", color: "#666" },
-  languageNameSelected: { color: "#ffffff" },
+  languageName: { fontSize: 14, fontWeight: "500" },
 });

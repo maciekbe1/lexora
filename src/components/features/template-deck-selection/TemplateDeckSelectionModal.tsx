@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { BaseModal } from "@/components/ui";
+import { useAppTheme } from "@/theme/useAppTheme";
 import { LanguageTab } from "./LanguageTab";
 import { TemplateDeckCard } from "./TemplateDeckCard";
 import { useTemplateDeckSelection } from "./useTemplateDeckSelection";
@@ -28,6 +29,7 @@ export function TemplateDeckSelectionModal({
   onClose,
   onDeckAdded,
 }: TemplateDeckSelectionModalProps) {
+  const { colors } = useAppTheme();
   const { user } = useAuthStore();
   const {
     templateDecks,
@@ -49,7 +51,7 @@ export function TemplateDeckSelectionModal({
       disableScroll
     >
       <View style={styles.modalContainer}>
-        <View style={styles.languageSelector}>
+        <View style={[styles.languageSelector, { borderBottomColor: colors.border }]}>
           <FlatList
             data={SUPPORTED_LANGUAGES}
             renderItem={({ item }) => (
@@ -68,8 +70,8 @@ export function TemplateDeckSelectionModal({
 
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.loadingText}>Ładowanie dostępnych tali...</Text>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.mutedText }]}>Ładowanie dostępnych tali...</Text>
           </View>
         ) : (
           <FlatList
@@ -104,8 +106,8 @@ export function TemplateDeckSelectionModal({
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             ListEmptyComponent={() => (
               <View style={styles.emptyState}>
-                <Ionicons name="library-outline" size={64} color="#C7C7CC" />
-                <Text style={styles.emptyText}>
+                <Ionicons name="library-outline" size={64} color={colors.mutedText} />
+                <Text style={[styles.emptyText, { color: colors.mutedText }]}>
                   {templateDecks.length === 0
                     ? `Brak dostępnych tali w języku ${getLanguageName(
                         selectedLanguage
@@ -126,19 +128,13 @@ export function TemplateDeckSelectionModal({
 const styles = StyleSheet.create({
   modalContainer: { flex: 1, backgroundColor: "transparent" },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loadingText: { marginTop: 16, fontSize: 16, color: "#666" },
+  loadingText: { marginTop: 16, fontSize: 16 },
   list: { paddingTop: 8, paddingBottom: 20 },
   separator: { height: 10 },
   emptyState: { alignItems: "center", paddingVertical: 60 },
-  emptyText: {
-    fontSize: 16,
-    color: "#8E8E93",
-    marginTop: 16,
-    textAlign: "center",
-  },
+  emptyText: { fontSize: 16, marginTop: 16, textAlign: "center" },
   languageSelector: {
     borderBottomWidth: 1,
-    borderBottomColor: "#e1e5e9",
     marginBottom: 8,
   },
   languageTabsContainer: { paddingHorizontal: 0, paddingVertical: 8 },

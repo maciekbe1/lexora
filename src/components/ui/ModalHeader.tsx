@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useAppTheme } from "@/theme/useAppTheme";
 
 interface ModalHeaderProps {
   title: string;
@@ -21,8 +22,9 @@ export function ModalHeader({
   rightButton,
   showCancel = false,
 }: ModalHeaderProps) {
+  const { colors } = useAppTheme();
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { borderBottomColor: colors.border }]}>
       {showCancel ? (
         <TouchableOpacity
           onPress={onClose}
@@ -30,13 +32,13 @@ export function ModalHeader({
           accessibilityRole="button"
           accessibilityLabel="Anuluj"
         >
-          <Text style={styles.cancelText}>Anuluj</Text>
+          <Text style={[styles.cancelText, { color: colors.primary }]}>Anuluj</Text>
         </TouchableOpacity>
       ) : (
         <View style={styles.leftButtonPlaceholder} />
       )}
       
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       
       <View style={styles.headerRightContainer}>
         {headerRight ? (
@@ -46,8 +48,7 @@ export function ModalHeader({
             onPress={rightButton.onPress}
             style={[
               styles.rightButton,
-              (rightButton.disabled || rightButton.loading) &&
-                styles.rightButtonDisabled,
+              (rightButton.disabled || rightButton.loading) && styles.rightButtonDisabled,
             ]}
             disabled={rightButton.disabled || rightButton.loading}
           >
@@ -74,14 +75,10 @@ const styles = StyleSheet.create({
   cancelButton: { 
     padding: 8 
   },
-  cancelText: { 
-    color: "#007AFF", 
-    fontSize: 16 
-  },
+  cancelText: { fontSize: 16 },
   title: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#000",
   },
   rightButton: {
     backgroundColor: "#007AFF",
