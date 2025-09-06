@@ -1,9 +1,10 @@
 import { AppHeader } from "@/components/ui";
-import { useAppTheme } from "@/theme/useAppTheme";
 import { ThemedSurface } from "@/theme/ThemedSurface";
+import { useAppTheme } from "@/theme/useAppTheme";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
+  Dimensions,
   FlatList,
   ScrollView,
   StyleSheet,
@@ -29,11 +30,16 @@ interface SearchResult {
   rating?: number;
 }
 
+// eslint-disable-next-line max-lines-per-function
 export default function SearchScreen() {
   const { colors, mode } = useAppTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const GRID_HPAD = 16; // categoriesContainer horizontal padding
+  const GRID_GAP = 12; // space between two columns
+  const screenWidth = Dimensions.get("window").width;
+  const cardWidth = Math.floor((screenWidth - GRID_HPAD * 2 - GRID_GAP) / 2);
 
   // Popular categories/collections
   const categories: SearchCategory[] = [
@@ -107,12 +113,27 @@ export default function SearchScreen() {
 
   const renderCategory = ({ item }: { item: SearchCategory }) => (
     <TouchableOpacity onPress={() => handleCategoryPress(item)}>
-      <ThemedSurface style={styles.categoryCard}>
-        <View style={[styles.categoryIcon, { backgroundColor: mode === 'dark' ? colors.background : '#E3F2FD' }]}>
+      <ThemedSurface style={[styles.categoryCard, { width: cardWidth }]}>
+        <View
+          style={[
+            styles.categoryIcon,
+            {
+              backgroundColor: mode === "dark" ? colors.background : "#E3F2FD",
+            },
+          ]}
+        >
           <Ionicons name={item.icon as any} size={24} color={colors.primary} />
         </View>
-        <Text style={[styles.categoryName, { color: colors.text }]}>{item.name}</Text>
-        <Text style={[styles.categoryCount, { color: colors.mutedText }]}>{item.count} fiszek</Text>
+        <Text
+          style={[styles.categoryName, { color: colors.text }]}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+        >
+          {item.name}
+        </Text>
+        <Text style={[styles.categoryCount, { color: colors.mutedText }]}>
+          {item.count} fiszek
+        </Text>
       </ThemedSurface>
     </TouchableOpacity>
   );
@@ -121,7 +142,15 @@ export default function SearchScreen() {
     <TouchableOpacity onPress={() => handleResultPress(item)}>
       <ThemedSurface style={styles.resultCard}>
         <View style={styles.resultHeader}>
-          <View style={[styles.resultIcon, { backgroundColor: mode === 'dark' ? colors.background : '#E3F2FD' }]}>
+          <View
+            style={[
+              styles.resultIcon,
+              {
+                backgroundColor:
+                  mode === "dark" ? colors.background : "#E3F2FD",
+              },
+            ]}
+          >
             <Ionicons
               name={item.type === "deck" ? "library" : "card"}
               size={20}
@@ -129,15 +158,29 @@ export default function SearchScreen() {
             />
           </View>
           <View style={styles.resultInfo}>
-            <Text style={[styles.resultTitle, { color: colors.text }]}>{item.title}</Text>
-            <Text style={[styles.resultDescription, { color: colors.mutedText }]}>{item.description}</Text>
+            <Text style={[styles.resultTitle, { color: colors.text }]}>
+              {item.title}
+            </Text>
+            <Text
+              style={[styles.resultDescription, { color: colors.mutedText }]}
+            >
+              {item.description}
+            </Text>
             {item.author && (
               <View style={styles.resultMeta}>
-                <Text style={[styles.resultAuthor, { color: colors.mutedText }]}>od {item.author}</Text>
+                <Text
+                  style={[styles.resultAuthor, { color: colors.mutedText }]}
+                >
+                  od {item.author}
+                </Text>
                 {item.rating && (
                   <View style={styles.rating}>
                     <Ionicons name="star" size={12} color="#FF9500" />
-                    <Text style={[styles.ratingText, { color: colors.mutedText }]}>{item.rating}</Text>
+                    <Text
+                      style={[styles.ratingText, { color: colors.mutedText }]}
+                    >
+                      {item.rating}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -154,8 +197,24 @@ export default function SearchScreen() {
 
       <View style={styles.content}>
         {/* Search Bar */}
-        <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <View style={[styles.searchBar, { backgroundColor: mode === 'dark' ? colors.background : '#f0f0f0' }]}>
+        <View
+          style={[
+            styles.searchContainer,
+            {
+              backgroundColor: colors.surface,
+              borderBottomColor: colors.border,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.searchBar,
+              {
+                backgroundColor:
+                  mode === "dark" ? colors.background : "#f0f0f0",
+              },
+            ]}
+          >
             <Ionicons name="search" size={20} color={colors.mutedText} />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
@@ -167,7 +226,11 @@ export default function SearchScreen() {
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => handleSearch("")}>
-                <Ionicons name="close-circle" size={20} color={colors.mutedText} />
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color={colors.mutedText}
+                />
               </TouchableOpacity>
             )}
           </View>
@@ -187,8 +250,14 @@ export default function SearchScreen() {
               ListEmptyComponent={
                 !isSearching ? (
                   <View style={styles.emptyResults}>
-                    <Ionicons name="search-outline" size={48} color={colors.mutedText} />
-                    <Text style={[styles.emptyText, { color: colors.mutedText }]}>
+                    <Ionicons
+                      name="search-outline"
+                      size={48}
+                      color={colors.mutedText}
+                    />
+                    <Text
+                      style={[styles.emptyText, { color: colors.mutedText }]}
+                    >
                       Brak wyników dla "{searchQuery}"
                     </Text>
                   </View>
@@ -202,7 +271,9 @@ export default function SearchScreen() {
             style={styles.categoriesContainer}
             showsVerticalScrollIndicator={false}
           >
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Popularne kolekcje</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Popularne kolekcje
+            </Text>
             <FlatList
               data={categories}
               renderItem={renderCategory}
@@ -216,8 +287,12 @@ export default function SearchScreen() {
             />
 
             <ThemedSurface style={styles.featuredSection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Polecane dla Ciebie</Text>
-              <Text style={[styles.comingSoon, { color: colors.mutedText }]}>Personalizowane rekomendacje będą wkrótce dostępne</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Polecane dla Ciebie
+              </Text>
+              <Text style={[styles.comingSoon, { color: colors.mutedText }]}>
+                Personalizowane rekomendacje będą wkrótce dostępne
+              </Text>
             </ThemedSurface>
           </ScrollView>
         )}
@@ -259,10 +334,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   categoryCard: {
-    flex: 1,
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
+    justifyContent: "center",
+    height: 140,
   },
   categoryIcon: {
     width: 48,
