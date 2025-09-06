@@ -1,4 +1,5 @@
 import { OAuthButton } from "@/components/ui";
+import { Link } from "expo-router";
 import { useAuthStore } from "@/store";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
@@ -95,6 +96,9 @@ export default function SignInScreen() {
           <Text style={styles.footerText}>
             Logując się, akceptujesz nasze warunki użytkowania i politykę
             prywatności
+          </Text>
+          <Text style={[styles.footerText, { marginTop: 8 }]}>
+            Nie masz konta? <Link href="/sign-up" style={{ color: '#007AFF' }}>Zarejestruj się</Link>
           </Text>
         </View>
       </KeyboardAvoidingView>

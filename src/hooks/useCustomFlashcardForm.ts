@@ -30,9 +30,6 @@ export function useCustomFlashcardForm({
     if (c.startsWith('fr')) return 'fr';
     if (c.startsWith('it')) return 'it';
     if (c.startsWith('pl')) return 'pl';
-    if (c.startsWith('pt')) return 'pt';
-    if (c.startsWith('ru')) return 'ru';
-    if (c.startsWith('uk')) return 'uk';
     return c.slice(0,2);
   };
   const [frontText, setFrontText] = useState('');

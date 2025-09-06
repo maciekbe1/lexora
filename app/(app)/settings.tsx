@@ -1,7 +1,10 @@
+import { LanguagePreferencesModal } from "@/components/features/preferences/LanguagePreferencesModal";
 import { AppHeader } from "@/components/ui";
+import { getLanguageFlag, getLanguageName } from "@/constants/languages";
+import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { useAuthStore } from "@/store";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -23,11 +26,14 @@ interface SettingItem {
   onToggle?: (value: boolean) => void;
 }
 
+// eslint-disable-next-line max-lines-per-function
 export default function SettingsScreen() {
   const { user, signOut } = useAuthStore();
   const [notifications, setNotifications] = useState(true);
   const [dailyReminders, setDailyReminders] = useState(false);
   const [soundEffects, setSoundEffects] = useState(true);
+  const { prefs, save } = useUserPreferences();
+  const [showPrefs, setShowPrefs] = useState(false);
 
   const handleSignOut = () => {
     Alert.alert("Wyloguj się", "Czy na pewno chcesz się wylogować?", [
@@ -81,6 +87,16 @@ export default function SettingsScreen() {
       subtitle: user?.email || "Niezalogowany",
       icon: "person-circle",
       type: "info",
+    },
+    {
+      id: "languages",
+      title: "Języki",
+      subtitle: prefs
+        ? `${getLanguageFlag(prefs.native_language)} ${getLanguageName(prefs.native_language)} → ${getLanguageFlag(prefs.target_language)} ${getLanguageName(prefs.target_language)}`
+        : "Ustaw język ojczysty i docelowy",
+      icon: "language",
+      type: "action",
+      onPress: () => setShowPrefs(true),
     },
 
     // Learning preferences
@@ -200,6 +216,16 @@ export default function SettingsScreen() {
     </TouchableOpacity>
   );
 
+  const handleSavePrefs = useCallback(
+    async (nativeLang: string, targetLang: string) => {
+      return await save({
+        native_language: nativeLang,
+        target_language: targetLang,
+      });
+    },
+    [save]
+  );
+
   return (
     <View style={styles.container}>
       <AppHeader title="Ustawienia" showAddButton={false} />
@@ -227,6 +253,14 @@ export default function SettingsScreen() {
             Zbudowano z ❤️ dla uczących się języków
           </Text>
         </View>
+
+        <LanguagePreferencesModal
+          visible={showPrefs}
+          onClose={() => setShowPrefs(false)}
+          initialNative={prefs?.native_language || "pl"}
+          initialTarget={prefs?.target_language || "en"}
+          onSave={handleSavePrefs}
+        />
       </ScrollView>
     </View>
   );

@@ -37,6 +37,7 @@ export default function DashboardScreen() {
     fetchUserDecks,
   } = useDashboard();
 
+
   const renderDeckItem = ({ item }: { item: UserDeck }) => (
     <DeckCard item={item} onPress={handleDeckPress} />
   );
@@ -104,6 +105,7 @@ export default function DashboardScreen() {
         onClose={modalHandlers.customDeck.hide}
         onCreateDeck={createCustomDeck}
       />
+
 
       <CustomFlashcardModal
         visible={showCustomFlashcardModal}
