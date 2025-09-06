@@ -1,3 +1,5 @@
+import { OAuthButton } from "@/components/ui";
+import { useAuthStore } from "@/store";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
@@ -11,8 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { OAuthButton } from "@/shared/components/ui";
-import { useAuthStore } from "@/store";
 
 export default function SignInScreen() {
   const [email, setEmail] = useState("");

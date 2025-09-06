@@ -1,20 +1,20 @@
 import React from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 
-import { TemplateDeckSelectionModal } from "@/shared/components/features/template-deck-selection";
-import { FloatingActionButton } from "@/shared/components/ui";
-import { useDashboard } from "@/shared/hooks";
-import type { UserDeck } from "@/shared/types/flashcard";
+import { TemplateDeckSelectionModal } from "@/components/features/template-deck-selection";
+import { FloatingActionButton } from "@/components/ui";
+import { useDashboard } from "@/hooks";
+import type { UserDeck } from "@/types/flashcard";
 
-import { CustomDeckCreationModal } from "@/shared/components/features/custom-deck-creation";
-import { CustomFlashcardModal } from "@/shared/components/features/custom-flashcard";
+import { CustomDeckCreationModal } from "@/components/features/custom-deck-creation";
+import { CustomFlashcardModal } from "@/components/features/custom-flashcard";
 import {
   DeckCard,
   DeckCardSkeleton,
   EmptyDeckState,
-} from "@/shared/components/features/deck";
-import { FloatingActionMenu } from "@/shared/components/features/floating-action-menu";
-import { AppHeader } from "@/shared/components/ui";
+} from "@/components/features/deck";
+import { FloatingActionMenu } from "@/components/features/floating-action-menu";
+import { AppHeader } from "@/components/ui";
 
 export default function DashboardScreen() {
   const {
@@ -74,9 +74,7 @@ export default function DashboardScreen() {
               />
             }
             ListEmptyComponent={
-              <EmptyDeckState
-                onBrowseTemplates={modalHandlers.template.show}
-              />
+              <EmptyDeckState onBrowseTemplates={modalHandlers.template.show} />
             }
             showsVerticalScrollIndicator={false}
             ItemSeparatorComponent={() => <View style={styles.separator} />}

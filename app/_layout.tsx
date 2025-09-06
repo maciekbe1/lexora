@@ -1,5 +1,5 @@
-import { EdgeBackGesture } from "@/shared/components/EdgeBackGesture";
-import { LoadingScreen } from "@/shared/components/ui";
+import { EdgeBackGesture } from "@/components/EdgeBackGesture";
+import { LoadingScreen } from "@/components/ui";
 import { useAppStore, useAuthStore } from "@/store";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";

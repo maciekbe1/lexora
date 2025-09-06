@@ -1,3 +1,4 @@
+import { AppHeader } from "@/components/ui";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
@@ -9,7 +10,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { AppHeader } from "@/shared/components/ui";
 
 interface SearchCategory {
   id: string;

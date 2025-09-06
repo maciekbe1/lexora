@@ -1,3 +1,5 @@
+import { AppHeader } from "@/components/ui";
+import { useAuthStore } from "@/store";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
@@ -9,8 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { AppHeader } from "@/shared/components/ui";
-import { useAuthStore } from "@/store";
 
 interface SettingItem {
   id: string;

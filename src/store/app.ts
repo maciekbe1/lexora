@@ -1,7 +1,7 @@
+import { localDatabase } from '@/services/local-database';
+import { storageService } from '@/services/storage';
+import { syncService } from '@/services/sync';
 import { create } from 'zustand';
-import { localDatabase } from '@/shared/services/local-database';
-import { storageService } from '@/shared/services/storage';
-import { syncService } from '@/shared/services/sync';
 
 interface AppInitState {
   initializedForUserId: string | null;

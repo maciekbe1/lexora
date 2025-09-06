@@ -1,19 +1,19 @@
-import { CustomFlashcardModal } from "@/shared/components/features/custom-flashcard/CustomFlashcardModal";
+import { CustomFlashcardModal } from "@/components/features/custom-flashcard/CustomFlashcardModal";
 import {
   DeckEditModal,
   DeckHeader,
   DeckHeaderSkeleton,
   DeckInfo,
   DeckInfoSkeleton,
-} from "@/shared/components/features/deck";
-import { DeckOptionsMenu } from "@/shared/components/features/deck-options-menu";
+} from "@/components/features/deck";
+import { DeckOptionsMenu } from "@/components/features/deck-options-menu";
 import {
   EmptyFlashcardsState,
   FlashcardItem,
   FlashcardItemSkeleton,
-} from "@/shared/components/features/flashcards";
-import { useDeckDetail } from "@/shared/hooks/useDeckDetail";
-import type { CustomFlashcard } from "@/shared/types/flashcard";
+} from "@/components/features/flashcards";
+import { useDeckDetail } from "@/hooks/useDeckDetail";
+import type { CustomFlashcard } from "@/types/flashcard";
 import React from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
