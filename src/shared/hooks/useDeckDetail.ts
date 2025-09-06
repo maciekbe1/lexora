@@ -1,4 +1,5 @@
-import { useDeferredLoading, useFlashcardManagement } from "@/shared/hooks";
+import { useDeferredLoading } from "@/shared/hooks/useDeferredLoading";
+import { useFlashcardManagement } from "@/shared/hooks/useFlashcardManagement";
 import type { CustomFlashcard } from "@/shared/types/flashcard";
 import { useAuthStore } from "@/store";
 import { useLocalSearchParams } from "expo-router";
@@ -7,7 +8,7 @@ import { useState } from "react";
 export function useDeckDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuthStore();
-  
+
   // Modal states
   const [showAddFlashcardModal, setShowAddFlashcardModal] = useState(false);
   const [showEditDeckModal, setShowEditDeckModal] = useState(false);
@@ -92,13 +93,12 @@ export function useDeckDetail() {
   return {
     // Route params
     deckId: id,
-    
     // Data
     deck,
     flashcards,
     deckName,
     deckDescription,
-    
+
     // States
     refreshing,
     showLoading,
@@ -107,7 +107,7 @@ export function useDeckDetail() {
     showEditDeckModal,
     showOptionsMenu,
     editingFlashcard,
-    
+
     // Handlers
     onRefresh,
     handleEditFlashcard,
@@ -119,7 +119,7 @@ export function useDeckDetail() {
     handleToggleOptionsMenu,
     handleFlashcardSubmit,
     handleUpdateDeck,
-    
+
     // Modal handlers
     modalHandlers,
   };

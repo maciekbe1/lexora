@@ -1,7 +1,7 @@
+import { translateText } from '@/shared/services/translation';
+import type { CustomFlashcard, UserDeck } from '@/shared/types/flashcard';
 import { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import type { CustomFlashcard, UserDeck } from '@/shared/types/flashcard';
-import { translateText } from '@/shared/services/translation';
 
 export interface UseCustomFlashcardFormParams {
   visible: boolean;
@@ -20,17 +20,32 @@ export function useCustomFlashcardForm({
   editingFlashcard,
   onCreateFlashcard,
 }: UseCustomFlashcardFormParams) {
+  const normalizeLangCode = (code?: string) => {
+    if (!code) return '';
+    const c = code.toLowerCase();
+    if (c.startsWith('en')) return 'en';
+    if (c.startsWith('es')) return 'es';
+    if (c.startsWith('de')) return 'de';
+    if (c.startsWith('fr')) return 'fr';
+    if (c.startsWith('it')) return 'it';
+    if (c.startsWith('pl')) return 'pl';
+    if (c.startsWith('pt')) return 'pt';
+    if (c.startsWith('ru')) return 'ru';
+    if (c.startsWith('uk')) return 'uk';
+    return c.slice(0,2);
+  };
   const [frontText, setFrontText] = useState('');
   const [backText, setBackText] = useState('');
   const [hintText, setHintText] = useState('');
   const [frontImageUrl, setFrontImageUrl] = useState('');
-  const [backImageUrl, setBackImageUrl] = useState('');
   const [selectedDeck, setSelectedDeck] = useState<string>(preselectedDeckId || '');
   const [isLoading, setIsLoading] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
 
   const backEditedManuallyRef = useRef(false);
   const lastAutoTranslationRef = useRef('');
+  const frontImageEditedRef = useRef(false);
+  const lastAutoImageRef = useRef('');
 
   // Only custom decks are allowed here
   const customDecks = userDecks.filter((d) => d.is_custom);
@@ -44,14 +59,12 @@ export function useCustomFlashcardForm({
       setBackText(editingFlashcard.back_text);
       setHintText(editingFlashcard.hint_text);
       setFrontImageUrl(editingFlashcard.front_image_url);
-      setBackImageUrl(editingFlashcard.back_image_url);
       setSelectedDeck(editingFlashcard.user_deck_id);
     } else {
       setFrontText('');
       setBackText('');
       setHintText('');
       setFrontImageUrl('');
-      setBackImageUrl('');
       backEditedManuallyRef.current = false;
       lastAutoTranslationRef.current = '';
 
@@ -64,14 +77,13 @@ export function useCustomFlashcardForm({
       }
     }
     // Intentionally ignore deps to run only on visibility change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   // Debounced auto-translation (PL -> deck language) when creating
   useEffect(() => {
     if (!visible || editingFlashcard) return;
     const deck = customDecks.find((d) => d.id === selectedDeck);
-    const targetLang = deck?.deck_language || '';
+    const targetLang = normalizeLangCode(deck?.deck_language);
 
     if (!targetLang || !frontText.trim()) return;
 
@@ -85,13 +97,22 @@ export function useCustomFlashcardForm({
         if (shouldWrite) {
           setBackText(translated);
         }
+
+        // Also set a representative image for the FRONT side from Unsplash
+        // Use the translated keyword (usually better coverage)
+        const unsplashUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(translated || frontText.trim())}`;
+        const prevAutoImg = lastAutoImageRef.current;
+        const shouldSetImage = !frontImageEditedRef.current || !frontImageUrl.trim() || frontImageUrl === prevAutoImg;
+        if (shouldSetImage) {
+          lastAutoImageRef.current = unsplashUrl;
+          setFrontImageUrl(unsplashUrl);
+        }
       } finally {
         setIsTranslating(false);
       }
     }, 500);
 
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frontText, selectedDeck, visible]);
 
   const handleCreate = async () => {
@@ -119,7 +140,7 @@ export function useCustomFlashcardForm({
         back_text: backText.trim(),
         hint_text: hintText.trim() || '',
         front_image_url: frontImageUrl || '',
-        back_image_url: backImageUrl || '',
+        back_image_url: '',
         front_audio_url: '',
         back_audio_url: '',
         position: 0,
@@ -129,6 +150,7 @@ export function useCustomFlashcardForm({
       await onCreateFlashcard(payload);
       resetForm();
       return true;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       Alert.alert('Błąd', 'Nie udało się utworzyć fiszki');
       return false;
@@ -142,7 +164,6 @@ export function useCustomFlashcardForm({
     setBackText('');
     setHintText('');
     setFrontImageUrl('');
-    setBackImageUrl('');
     if (!preselectedDeckId) setSelectedDeck('');
   };
 
@@ -155,7 +176,6 @@ export function useCustomFlashcardForm({
     backText,
     hintText,
     frontImageUrl,
-    backImageUrl,
     selectedDeck,
     isLoading,
     isTranslating,
@@ -165,9 +185,9 @@ export function useCustomFlashcardForm({
     setBackText,
     setHintText,
     setFrontImageUrl,
-    setBackImageUrl,
     setSelectedDeck,
     markBackEdited: () => (backEditedManuallyRef.current = true),
+    markFrontImageEdited: () => (frontImageEditedRef.current = true),
 
     // actions
     handleCreate,

@@ -97,3 +97,8 @@ Thumbs.db
 ehthumbs.db
 
 .claude
+# Supabase: keep functions/migrations in git; ignore local state and secrets
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+supabase/**/.env

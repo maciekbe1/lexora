@@ -1,5 +1,6 @@
-import { ModalDragHandle, ModalHeader } from "@/shared/components/ui";
-import { useBaseModal } from "@/shared/hooks";
+import { ModalDragHandle } from "@/shared/components/ui/ModalDragHandle";
+import { ModalHeader } from "@/shared/components/ui/ModalHeader";
+import { useBaseModal } from "@/shared/hooks/useBaseModal";
 import { ReactNode } from "react";
 import {
   Animated,

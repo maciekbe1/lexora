@@ -45,7 +45,6 @@ export function CustomFlashcardModal({
     backText,
     hintText,
     frontImageUrl,
-    backImageUrl,
     selectedDeck,
     isLoading,
     isTranslating,
@@ -53,9 +52,9 @@ export function CustomFlashcardModal({
     setBackText,
     setHintText,
     setFrontImageUrl,
-    setBackImageUrl,
     setSelectedDeck,
     markBackEdited,
+    markFrontImageEdited,
     handleCreate,
   } = useCustomFlashcardForm(params);
 
@@ -83,7 +82,12 @@ export function CustomFlashcardModal({
       {customDecks.length > 0 && (
         <>
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Przód fiszki *</Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Przód fiszki *</Text>
+              <View style={styles.langBadge}>
+                <Text style={styles.langText}>🇵🇱 PL</Text>
+              </View>
+            </View>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={frontText}
@@ -103,13 +107,23 @@ export function CustomFlashcardModal({
             <Text style={styles.label}>Zdjęcie przodu (opcjonalnie)</Text>
             <ImagePickerComponent
               imageUrl={frontImageUrl}
-              onImageSelected={setFrontImageUrl}
+              onImageSelected={(url) => {
+                markFrontImageEdited();
+                setFrontImageUrl(url);
+              }}
               placeholder="Dodaj zdjęcie do przodu fiszki"
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Tył fiszki *</Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Tył fiszki *</Text>
+              <View style={styles.langBadge}>
+                <Text style={styles.langText}>
+                  {`${(customDecks.find(d => d.id === selectedDeck)?.deck_language || '').toUpperCase() || '??'}`}
+                </Text>
+              </View>
+            </View>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={backText}
@@ -131,15 +145,6 @@ export function CustomFlashcardModal({
                 <Text style={styles.translatingHint}>Tłumaczę…</Text>
               )}
             </View>
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Zdjęcie tyłu (opcjonalnie)</Text>
-            <ImagePickerComponent
-              imageUrl={backImageUrl}
-              onImageSelected={setBackImageUrl}
-              placeholder="Dodaj zdjęcie do tyłu fiszki"
-            />
           </View>
 
           <View style={styles.formGroup}>
@@ -166,11 +171,30 @@ const styles = StyleSheet.create({
   formGroup: {
     marginBottom: 24,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   label: {
     fontSize: 16,
     fontWeight: "500",
     color: "#333",
-    marginBottom: 8,
+    marginBottom: 0,
+  },
+  langBadge: {
+    backgroundColor: '#f0f0f3',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e3e3e7',
+  },
+  langText: {
+    fontSize: 12,
+    color: '#333',
+    fontWeight: '600',
   },
   input: {
     borderWidth: 1,

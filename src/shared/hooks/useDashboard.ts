@@ -1,7 +1,9 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import type { UserDeck } from "@/shared/types/flashcard";
-import { useAppInitialization, useDeckManagement, useDeferredLoading } from "@/shared/hooks";
+import { useAppInitialization } from "@/shared/hooks/useAppInitialization";
+import { useDeckManagement } from "@/shared/hooks/useDeckManagement";
+import { useDeferredLoading } from "@/shared/hooks/useDeferredLoading";
 import { useAuthStore } from "@/store";
 
 export function useDashboard() {
