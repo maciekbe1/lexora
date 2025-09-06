@@ -16,22 +16,24 @@ const CHUNK_SIZE = 1800; // conservative to account for encoding overhead
 const chunkCountKey = (key: string) => `${key}__chunk_count`;
 const chunkKey = (key: string, index: number) => `${key}__chunk_${index}`;
 
+const SECURE_OPTS = { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK } as const;
+
 const ExpoSecureStoreAdapter = {
   getItem: async (key: string) => {
     if (Platform.OS === 'web') {
       return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
     }
-    const countStr = await SecureStore.getItemAsync(chunkCountKey(key));
+    const countStr = await SecureStore.getItemAsync(chunkCountKey(key), SECURE_OPTS);
     const count = countStr ? Number(countStr) : 0;
     if (count && Number.isFinite(count) && count > 0) {
       const parts: string[] = [];
       for (let i = 0; i < count; i++) {
-        const part = await SecureStore.getItemAsync(chunkKey(key, i));
+        const part = await SecureStore.getItemAsync(chunkKey(key, i), SECURE_OPTS);
         parts.push(part ?? '');
       }
       return parts.join('');
     }
-    return SecureStore.getItemAsync(key);
+    return SecureStore.getItemAsync(key, SECURE_OPTS);
   },
   setItem: async (key: string, value: string) => {
     if (Platform.OS === 'web') {
@@ -41,30 +43,30 @@ const ExpoSecureStoreAdapter = {
       return;
     }
     // Clean previous chunked values if any
-    const prevCountStr = await SecureStore.getItemAsync(chunkCountKey(key));
+    const prevCountStr = await SecureStore.getItemAsync(chunkCountKey(key), SECURE_OPTS);
     const prevCount = prevCountStr ? Number(prevCountStr) : 0;
     if (prevCount && Number.isFinite(prevCount) && prevCount > 0) {
       for (let i = 0; i < prevCount; i++) {
-        await SecureStore.deleteItemAsync(chunkKey(key, i));
+        await SecureStore.deleteItemAsync(chunkKey(key, i), SECURE_OPTS);
       }
-      await SecureStore.deleteItemAsync(chunkCountKey(key));
+      await SecureStore.deleteItemAsync(chunkCountKey(key), SECURE_OPTS);
     }
 
     if (value.length > CHUNK_SIZE) {
       // Remove base key to avoid ambiguity
-      await SecureStore.deleteItemAsync(key);
+      await SecureStore.deleteItemAsync(key, SECURE_OPTS);
       const parts: string[] = [];
       for (let i = 0; i < value.length; i += CHUNK_SIZE) {
         parts.push(value.slice(i, i + CHUNK_SIZE));
       }
       // Store parts
       await Promise.all(
-        parts.map((part, idx) => SecureStore.setItemAsync(chunkKey(key, idx), part))
+        parts.map((part, idx) => SecureStore.setItemAsync(chunkKey(key, idx), part, SECURE_OPTS))
       );
-      await SecureStore.setItemAsync(chunkCountKey(key), String(parts.length));
+      await SecureStore.setItemAsync(chunkCountKey(key), String(parts.length), SECURE_OPTS);
     } else {
       // Store as a single value
-      await SecureStore.setItemAsync(key, value);
+      await SecureStore.setItemAsync(key, value, SECURE_OPTS);
     }
   },
   removeItem: async (key: string) => {
@@ -74,15 +76,15 @@ const ExpoSecureStoreAdapter = {
       }
       return;
     }
-    const countStr = await SecureStore.getItemAsync(chunkCountKey(key));
+    const countStr = await SecureStore.getItemAsync(chunkCountKey(key), SECURE_OPTS);
     const count = countStr ? Number(countStr) : 0;
     if (count && Number.isFinite(count) && count > 0) {
       for (let i = 0; i < count; i++) {
-        await SecureStore.deleteItemAsync(chunkKey(key, i));
+        await SecureStore.deleteItemAsync(chunkKey(key, i), SECURE_OPTS);
       }
-      await SecureStore.deleteItemAsync(chunkCountKey(key));
+      await SecureStore.deleteItemAsync(chunkCountKey(key), SECURE_OPTS);
     }
-    await SecureStore.deleteItemAsync(key);
+    await SecureStore.deleteItemAsync(key, SECURE_OPTS);
   },
 };
 

@@ -22,12 +22,12 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   effective: computeEffective('system', (Appearance.getColorScheme() || 'light') as 'light' | 'dark'),
   setMode: (mode: ThemeMode) => {
     // persist asynchronously; no need to await
-    SecureStore.setItemAsync('lexora_theme_mode', mode).catch(() => {});
+    SecureStore.setItemAsync('lexora_theme_mode', mode, { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK }).catch(() => {});
     set((state) => ({ mode, effective: computeEffective(mode, state.systemScheme) }));
   },
   init: () => {
     // Load persisted mode if available
-    SecureStore.getItemAsync('lexora_theme_mode')
+    SecureStore.getItemAsync('lexora_theme_mode', { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK })
       .then((saved) => {
         if (!saved) return;
         if (saved === 'system' || saved === 'light' || saved === 'dark') {

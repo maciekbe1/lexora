@@ -137,7 +137,7 @@ export function useImagePicker(userId: string | undefined, onImageSelected: (url
       if (q.length >= 2) {
         setRecentQueries((prev) => {
           const next = [q, ...prev.filter((p) => p.toLowerCase() !== q.toLowerCase())].slice(0, 10);
-          SecureStore.setItemAsync(HISTORY_KEY, JSON.stringify(next)).catch(() => {});
+          SecureStore.setItemAsync(HISTORY_KEY, JSON.stringify(next), { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK }).catch(() => {});
           return next;
         });
       }
@@ -164,7 +164,7 @@ export function useImagePicker(userId: string | undefined, onImageSelected: (url
 
   // Load recent queries on mount
   React.useEffect(() => {
-    SecureStore.getItemAsync(HISTORY_KEY)
+    SecureStore.getItemAsync(HISTORY_KEY, { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK })
       .then((val) => {
         if (!val) return;
         try {
@@ -182,13 +182,13 @@ export function useImagePicker(userId: string | undefined, onImageSelected: (url
 
   const clearHistory = React.useCallback(() => {
     setRecentQueries([]);
-    SecureStore.deleteItemAsync(HISTORY_KEY).catch(() => {});
+    SecureStore.deleteItemAsync(HISTORY_KEY, { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK }).catch(() => {});
   }, []);
 
   const removeHistoryQuery = React.useCallback((q: string) => {
     setRecentQueries((prev) => {
       const next = prev.filter((p) => p.toLowerCase() !== q.toLowerCase());
-      SecureStore.setItemAsync(HISTORY_KEY, JSON.stringify(next)).catch(() => {});
+      SecureStore.setItemAsync(HISTORY_KEY, JSON.stringify(next), { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK }).catch(() => {});
       return next;
     });
   }, []);
