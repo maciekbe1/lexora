@@ -1,4 +1,6 @@
 import { AppHeader } from "@/components/ui";
+import { useAppTheme } from "@/theme/useAppTheme";
+import { ThemedSurface } from "@/theme/ThemedSurface";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
@@ -28,6 +30,7 @@ interface SearchResult {
 }
 
 export default function SearchScreen() {
+  const { colors, mode } = useAppTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -103,69 +106,68 @@ export default function SearchScreen() {
   };
 
   const renderCategory = ({ item }: { item: SearchCategory }) => (
-    <TouchableOpacity
-      style={styles.categoryCard}
-      onPress={() => handleCategoryPress(item)}
-    >
-      <View style={styles.categoryIcon}>
-        <Ionicons name={item.icon as any} size={24} color="#007AFF" />
-      </View>
-      <Text style={styles.categoryName}>{item.name}</Text>
-      <Text style={styles.categoryCount}>{item.count} fiszek</Text>
+    <TouchableOpacity onPress={() => handleCategoryPress(item)}>
+      <ThemedSurface style={styles.categoryCard}>
+        <View style={[styles.categoryIcon, { backgroundColor: mode === 'dark' ? colors.background : '#E3F2FD' }]}>
+          <Ionicons name={item.icon as any} size={24} color={colors.primary} />
+        </View>
+        <Text style={[styles.categoryName, { color: colors.text }]}>{item.name}</Text>
+        <Text style={[styles.categoryCount, { color: colors.mutedText }]}>{item.count} fiszek</Text>
+      </ThemedSurface>
     </TouchableOpacity>
   );
 
   const renderSearchResult = ({ item }: { item: SearchResult }) => (
-    <TouchableOpacity
-      style={styles.resultCard}
-      onPress={() => handleResultPress(item)}
-    >
-      <View style={styles.resultHeader}>
-        <View style={styles.resultIcon}>
-          <Ionicons
-            name={item.type === "deck" ? "library" : "card"}
-            size={20}
-            color="#007AFF"
-          />
+    <TouchableOpacity onPress={() => handleResultPress(item)}>
+      <ThemedSurface style={styles.resultCard}>
+        <View style={styles.resultHeader}>
+          <View style={[styles.resultIcon, { backgroundColor: mode === 'dark' ? colors.background : '#E3F2FD' }]}>
+            <Ionicons
+              name={item.type === "deck" ? "library" : "card"}
+              size={20}
+              color={colors.primary}
+            />
+          </View>
+          <View style={styles.resultInfo}>
+            <Text style={[styles.resultTitle, { color: colors.text }]}>{item.title}</Text>
+            <Text style={[styles.resultDescription, { color: colors.mutedText }]}>{item.description}</Text>
+            {item.author && (
+              <View style={styles.resultMeta}>
+                <Text style={[styles.resultAuthor, { color: colors.mutedText }]}>od {item.author}</Text>
+                {item.rating && (
+                  <View style={styles.rating}>
+                    <Ionicons name="star" size={12} color="#FF9500" />
+                    <Text style={[styles.ratingText, { color: colors.mutedText }]}>{item.rating}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
         </View>
-        <View style={styles.resultInfo}>
-          <Text style={styles.resultTitle}>{item.title}</Text>
-          <Text style={styles.resultDescription}>{item.description}</Text>
-          {item.author && (
-            <View style={styles.resultMeta}>
-              <Text style={styles.resultAuthor}>od {item.author}</Text>
-              {item.rating && (
-                <View style={styles.rating}>
-                  <Ionicons name="star" size={12} color="#FF9500" />
-                  <Text style={styles.ratingText}>{item.rating}</Text>
-                </View>
-              )}
-            </View>
-          )}
-        </View>
-      </View>
+      </ThemedSurface>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader title="Szukaj" showAddButton={false} />
 
       <View style={styles.content}>
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={20} color="#8E8E93" />
+        <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <View style={[styles.searchBar, { backgroundColor: mode === 'dark' ? colors.background : '#f0f0f0' }]}>
+            <Ionicons name="search" size={20} color={colors.mutedText} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: colors.text }]}
               placeholder="Szukaj fiszek, kolekcji..."
+              placeholderTextColor={colors.mutedText}
               value={searchQuery}
               onChangeText={handleSearch}
               returnKeyType="search"
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => handleSearch("")}>
-                <Ionicons name="close-circle" size={20} color="#8E8E93" />
+                <Ionicons name="close-circle" size={20} color={colors.mutedText} />
               </TouchableOpacity>
             )}
           </View>
@@ -174,7 +176,7 @@ export default function SearchScreen() {
         {/* Search Results */}
         {searchQuery.length > 0 ? (
           <View style={styles.resultsContainer}>
-            <Text style={styles.sectionTitle}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {isSearching ? "Szukam..." : `Wyniki dla "${searchQuery}"`}
             </Text>
             <FlatList
@@ -185,8 +187,8 @@ export default function SearchScreen() {
               ListEmptyComponent={
                 !isSearching ? (
                   <View style={styles.emptyResults}>
-                    <Ionicons name="search-outline" size={48} color="#C7C7CC" />
-                    <Text style={styles.emptyText}>
+                    <Ionicons name="search-outline" size={48} color={colors.mutedText} />
+                    <Text style={[styles.emptyText, { color: colors.mutedText }]}>
                       Brak wyników dla "{searchQuery}"
                     </Text>
                   </View>
@@ -200,7 +202,7 @@ export default function SearchScreen() {
             style={styles.categoriesContainer}
             showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.sectionTitle}>Popularne kolekcje</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Popularne kolekcje</Text>
             <FlatList
               data={categories}
               renderItem={renderCategory}
@@ -213,12 +215,10 @@ export default function SearchScreen() {
               columnWrapperStyle={styles.categoryRow}
             />
 
-            <View style={styles.featuredSection}>
-              <Text style={styles.sectionTitle}>Polecane dla Ciebie</Text>
-              <Text style={styles.comingSoon}>
-                Personalizowane rekomendacje będą wkrótce dostępne
-              </Text>
-            </View>
+            <ThemedSurface style={styles.featuredSection}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Polecane dla Ciebie</Text>
+              <Text style={[styles.comingSoon, { color: colors.mutedText }]}>Personalizowane rekomendacje będą wkrótce dostępne</Text>
+            </ThemedSurface>
           </ScrollView>
         )}
       </View>
@@ -227,24 +227,19 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f9fa",
-  },
+  container: { flex: 1 },
   content: {
     flex: 1,
   },
   searchContainer: {
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: "#ffffff",
     borderBottomWidth: 1,
     borderBottomColor: "#e1e5e9",
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f0f0f0",
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -252,7 +247,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: "#1a1a1a",
     marginLeft: 8,
   },
   categoriesContainer: {
@@ -262,29 +256,18 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#1a1a1a",
     marginBottom: 16,
   },
   categoryCard: {
     flex: 1,
-    backgroundColor: "#ffffff",
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
   categoryIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#E3F2FD",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
@@ -292,13 +275,11 @@ const styles = StyleSheet.create({
   categoryName: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#1a1a1a",
     textAlign: "center",
     marginBottom: 4,
   },
   categoryCount: {
     fontSize: 12,
-    color: "#8E8E93",
   },
   categoryRow: {
     justifyContent: "space-between",
@@ -311,18 +292,9 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   resultCard: {
-    backgroundColor: "#ffffff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
   resultHeader: {
     flexDirection: "row",
@@ -332,7 +304,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#E3F2FD",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -343,12 +314,10 @@ const styles = StyleSheet.create({
   resultTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1a1a1a",
     marginBottom: 4,
   },
   resultDescription: {
     fontSize: 14,
-    color: "#666",
     marginBottom: 8,
   },
   resultMeta: {
@@ -358,7 +327,6 @@ const styles = StyleSheet.create({
   },
   resultAuthor: {
     fontSize: 12,
-    color: "#8E8E93",
   },
   rating: {
     flexDirection: "row",
@@ -366,7 +334,6 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 12,
-    color: "#8E8E93",
     marginLeft: 2,
   },
   emptyResults: {
@@ -375,19 +342,16 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: "#8E8E93",
     marginTop: 12,
   },
   featuredSection: {
     marginTop: 32,
     padding: 20,
-    backgroundColor: "#ffffff",
     borderRadius: 12,
     alignItems: "center",
   },
   comingSoon: {
     fontSize: 14,
-    color: "#8E8E93",
     textAlign: "center",
   },
 });
