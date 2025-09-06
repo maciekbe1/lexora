@@ -17,6 +17,23 @@ export class SyncService {
     this.isSyncing = true;
     try {
       console.log('Starting sync to remote...');
+      // First process tombstones (deletion queue) so remote won't rehydrate removed items
+      const deletions = await localDatabase.getDeletionQueue();
+      for (const d of deletions) {
+        try {
+          if (d.entity_type === 'deck') {
+            // Delete flashcards for deck, then deck records
+            await supabase.from('custom_flashcards').delete().eq('user_deck_id', d.entity_id);
+            await supabase.from('custom_decks').delete().eq('id', d.entity_id);
+            await supabase.from('user_decks').delete().eq('id', d.entity_id);
+          } else if (d.entity_type === 'flashcard') {
+            await supabase.from('custom_flashcards').delete().eq('id', d.entity_id);
+          }
+          await localDatabase.clearDeletion(d.entity_type as any, d.entity_id);
+        } catch (e) {
+          console.log('Failed to process deletion tombstone:', d, e);
+        }
+      }
       
       // Get unsynced items from local database
       const unsyncedItems = await localDatabase.getUnsyncedItems();

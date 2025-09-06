@@ -72,6 +72,14 @@ export class LocalDatabase {
 
         CREATE INDEX IF NOT EXISTS idx_user_decks_user_id ON user_decks (user_id);
         CREATE INDEX IF NOT EXISTS idx_custom_flashcards_deck_id ON custom_flashcards (user_deck_id);
+
+        -- Deletion queue for offline tombstones
+        CREATE TABLE IF NOT EXISTS deletion_queue (
+          entity_type TEXT NOT NULL,
+          entity_id TEXT NOT NULL,
+          created_at TEXT DEFAULT (datetime('now')),
+          PRIMARY KEY (entity_type, entity_id)
+        );
       `);
 
       // Migrate user_decks table to unified model
@@ -342,7 +350,7 @@ export class LocalDatabase {
       
       // Update the user_decks table
       await db.runAsync(
-        `UPDATE user_decks SET deck_flashcard_count = ? WHERE id = ?`,
+        `UPDATE user_decks SET deck_flashcard_count = ?, is_dirty = 1 WHERE id = ?`,
         [actualCount, userDeckId]
       );
     } catch (error) {
@@ -466,6 +474,30 @@ export class LocalDatabase {
   }
 
   /**
+   * Deletion queue (tombstones) API
+   */
+  async enqueueDeletion(entityType: 'deck' | 'flashcard', entityId: string): Promise<void> {
+    const db = await this.getDb();
+    await db.runAsync(
+      `INSERT OR IGNORE INTO deletion_queue (entity_type, entity_id) VALUES (?, ?)`,
+      [entityType, entityId]
+    );
+  }
+
+  async getDeletionQueue(): Promise<{ entity_type: string; entity_id: string }[]> {
+    const db = await this.getDb();
+    return db.getAllAsync(`SELECT entity_type, entity_id FROM deletion_queue`);
+  }
+
+  async clearDeletion(entityType: 'deck' | 'flashcard', entityId: string): Promise<void> {
+    const db = await this.getDb();
+    await db.runAsync(
+      `DELETE FROM deletion_queue WHERE entity_type = ? AND entity_id = ?`,
+      [entityType, entityId]
+    );
+  }
+
+  /**
    * Mark items as synced
    */
   async markAsSynced(table: string, ids: string[]): Promise<void> {
@@ -559,28 +591,7 @@ export class LocalDatabase {
     }
   }
 
-  /**
-   * Clear invalid custom decks (with old non-UUID IDs)
-   */
-  async clearInvalidCustomDecks(): Promise<void> {
-    try {
-      const db = await this.getDb();
-      
-      // Delete custom decks that don't have valid UUID format
-      await db.execAsync(`
-        DELETE FROM custom_flashcards WHERE user_deck_id IN (
-          SELECT id FROM user_decks WHERE is_custom = 1 AND id NOT LIKE '%-%'
-        );
-        DELETE FROM custom_decks WHERE id NOT LIKE '%-%';
-        DELETE FROM user_decks WHERE is_custom = 1 AND id NOT LIKE '%-%';
-      `);
-      
-      console.log('Cleared invalid custom decks from local database');
-    } catch (error) {
-      console.error('Error clearing invalid custom decks:', error);
-      throw error;
-    }
-  }
+  // Removed legacy cleanup method clearInvalidCustomDecks
 
   /**
    * Clear a specific custom flashcard
@@ -595,21 +606,8 @@ export class LocalDatabase {
         [flashcardId]
       );
       
-      // First, try to sync deletion to remote before deleting locally
-      try {
-        const { error: deleteError } = await supabase
-          .from('custom_flashcards')
-          .delete()
-          .eq('id', flashcardId);
-        
-        if (deleteError) {
-          console.log('Could not delete flashcard from remote:', deleteError);
-        }
-
-        console.log(`Deleted flashcard ${flashcardId} from remote database`);
-      } catch (error) {
-        console.log('Could not sync flashcard deletion to remote (offline?):', error);
-      }
+      // Enqueue tombstone for remote deletion
+      await this.enqueueDeletion('flashcard', flashcardId);
       
       // Delete from local database regardless of remote sync result
       await db.runAsync(
@@ -636,47 +634,8 @@ export class LocalDatabase {
     try {
       const db = await this.getDb();
       
-      // First, try to sync deletion to remote before deleting locally
-      try {
-        console.log(`Attempting to delete deck ${deckId} from remote database`);
-        
-        const { error: deleteFlashcardsError } = await supabase
-          .from('custom_flashcards')
-          .delete()
-          .eq('user_deck_id', deckId);
-        
-        if (deleteFlashcardsError) {
-          console.log('Could not delete flashcards from remote:', deleteFlashcardsError);
-        } else {
-          console.log(`Successfully deleted flashcards for deck ${deckId} from remote`);
-        }
-
-        const { error: deleteCustomDeckError } = await supabase
-          .from('custom_decks')
-          .delete()
-          .eq('id', deckId);
-        
-        if (deleteCustomDeckError) {
-          console.log('Could not delete custom deck from remote:', deleteCustomDeckError);
-        } else {
-          console.log(`Successfully deleted custom deck ${deckId} from remote`);
-        }
-
-        const { error: deleteUserDeckError } = await supabase
-          .from('user_decks')
-          .delete()
-          .eq('id', deckId);
-        
-        if (deleteUserDeckError) {
-          console.log('Could not delete user deck from remote:', deleteUserDeckError);
-        } else {
-          console.log(`Successfully deleted user deck ${deckId} from remote`);
-        }
-
-        console.log(`Completed remote deletion attempt for deck ${deckId}`);
-      } catch (error) {
-        console.log('Could not sync deletion to remote (offline?):', error);
-      }
+      // Enqueue tombstone for remote deck deletion (will also delete its flashcards remotely)
+      await this.enqueueDeletion('deck', deckId);
       
       // Delete from local database regardless of remote sync result
       console.log(`Deleting flashcards for deck ${deckId}`);

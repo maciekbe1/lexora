@@ -1,11 +1,11 @@
-import { User } from '@supabase/supabase-js';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert } from 'react-native';
 import { localDatabase } from '@/shared/services/local-database';
 import { storageService } from '@/shared/services/storage';
 import { syncService } from '@/shared/services/sync';
 import type { CustomFlashcard, UserDeck } from '@/shared/types/flashcard';
+import { User } from '@supabase/supabase-js';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 
 // Helpers extracted to reduce hook size
 async function syncUser(userId: string) {
@@ -82,14 +82,16 @@ async function upsertDeck(userId: string, deck: UserDeck) {
   await syncUser(userId);
 }
 
+// eslint-disable-next-line max-lines-per-function
 export function useFlashcardManagement(user: User | null, deckId: string) {
   const [deck, setDeck] = useState<UserDeck | null>(null);
   const [flashcards, setFlashcards] = useState<CustomFlashcard[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  // Offline-first: avoid initial skeleton; show existing local data immediately
+  const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Load deck and flashcards
+  // Load deck and flashcards (local-first)
   const loadDeckData = async () => {
     if (!user || !deckId) return;
 
@@ -121,6 +123,11 @@ export function useFlashcardManagement(user: User | null, deckId: string) {
       setIsLoading(false);
     }
   };
+
+  // Initial load and when params change (do not toggle global loading)
+  useEffect(() => {
+    loadDeckData();
+  }, [user?.id, deckId]);
 
   // Handle refresh
   const onRefresh = async () => { setRefreshing(true); await loadDeckData(); setRefreshing(false); };
