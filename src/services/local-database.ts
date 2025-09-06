@@ -73,6 +73,19 @@ export class LocalDatabase {
         CREATE INDEX IF NOT EXISTS idx_user_decks_user_id ON user_decks (user_id);
         CREATE INDEX IF NOT EXISTS idx_custom_flashcards_deck_id ON custom_flashcards (user_deck_id);
 
+        -- Progress per flashcard (local-only)
+        CREATE TABLE IF NOT EXISTS custom_flashcard_progress (
+          flashcard_id TEXT PRIMARY KEY,
+          user_deck_id TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'new', -- new | learning | review | mastered
+          correct_count INTEGER DEFAULT 0,
+          incorrect_count INTEGER DEFAULT 0,
+          next_review_at TEXT,
+          last_reviewed_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_progress_deck ON custom_flashcard_progress (user_deck_id);
+        CREATE INDEX IF NOT EXISTS idx_progress_next_review ON custom_flashcard_progress (next_review_at);
+
         -- Deletion queue for offline tombstones
         CREATE TABLE IF NOT EXISTS deletion_queue (
           entity_type TEXT NOT NULL,
@@ -85,11 +98,48 @@ export class LocalDatabase {
       // Migrate user_decks table to unified model
       await this.migrateToUnifiedModel(db);
 
+      // Ensure study stats columns exist (handles already-migrated DBs)
+      await this.ensureStatsColumns(db);
+
       this.isInitialized = true;
       console.log('Local database initialized successfully');
     } catch (error) {
       console.error('Error initializing local database:', error);
       throw error;
+    }
+  }
+
+  private async ensureStatsColumns(db: SQLite.SQLiteDatabase): Promise<void> {
+    try {
+      const tableInfo = await db.getAllAsync("PRAGMA table_info(user_decks)");
+      const hasNew = tableInfo.some((c: any) => c.name === 'stats_new');
+      const hasLearning = tableInfo.some((c: any) => c.name === 'stats_learning');
+      const hasReview = tableInfo.some((c: any) => c.name === 'stats_review');
+      const hasMastered = tableInfo.some((c: any) => c.name === 'stats_mastered');
+      const hasUpdatedAt = tableInfo.some((c: any) => c.name === 'stats_updated_at');
+
+      const alters: string[] = [];
+      if (!hasNew) alters.push(`ALTER TABLE user_decks ADD COLUMN stats_new INTEGER DEFAULT 0`);
+      if (!hasLearning) alters.push(`ALTER TABLE user_decks ADD COLUMN stats_learning INTEGER DEFAULT 0`);
+      if (!hasReview) alters.push(`ALTER TABLE user_decks ADD COLUMN stats_review INTEGER DEFAULT 0`);
+      if (!hasMastered) alters.push(`ALTER TABLE user_decks ADD COLUMN stats_mastered INTEGER DEFAULT 0`);
+      if (!hasUpdatedAt) alters.push(`ALTER TABLE user_decks ADD COLUMN stats_updated_at TEXT`);
+
+      if (alters.length > 0) {
+        await db.execAsync(alters.join(';') + ';');
+        // Initialize defaults based on counts if newly added
+        await db.execAsync(`
+          UPDATE user_decks
+          SET stats_new = COALESCE(stats_new, 0) + COALESCE(deck_flashcard_count, 0),
+              stats_learning = COALESCE(stats_learning, 0),
+              stats_review = COALESCE(stats_review, 0),
+              stats_mastered = COALESCE(stats_mastered, 0),
+              stats_updated_at = datetime('now')
+          WHERE stats_new IS NULL OR stats_learning IS NULL OR stats_review IS NULL OR stats_mastered IS NULL;
+        `);
+      }
+    } catch (e) {
+      console.error('Error ensuring stats columns:', e);
     }
   }
 
@@ -122,6 +172,12 @@ export class LocalDatabase {
         ALTER TABLE user_decks ADD COLUMN deck_is_active INTEGER DEFAULT 1;
         ALTER TABLE user_decks ADD COLUMN deck_created_at TEXT;
         ALTER TABLE user_decks ADD COLUMN deck_updated_at TEXT;
+        -- Study stats
+        ALTER TABLE user_decks ADD COLUMN stats_new INTEGER DEFAULT 0;
+        ALTER TABLE user_decks ADD COLUMN stats_learning INTEGER DEFAULT 0;
+        ALTER TABLE user_decks ADD COLUMN stats_review INTEGER DEFAULT 0;
+        ALTER TABLE user_decks ADD COLUMN stats_mastered INTEGER DEFAULT 0;
+        ALTER TABLE user_decks ADD COLUMN stats_updated_at TEXT;
       `);
 
       // Migrate existing custom deck data to unified columns
@@ -168,9 +224,20 @@ export class LocalDatabase {
       `);
 
       console.log('Successfully migrated user_decks table to unified model');
-      
+
       // Additional fix for existing custom decks that may have missing deck_name
       await this.fixExistingCustomDecks(db);
+
+      // Initialize study stats based on flashcard counts
+      await db.execAsync(`
+        UPDATE user_decks
+        SET stats_new = COALESCE(stats_new, 0) + COALESCE(deck_flashcard_count, 0),
+            stats_learning = COALESCE(stats_learning, 0),
+            stats_review = COALESCE(stats_review, 0),
+            stats_mastered = COALESCE(stats_mastered, 0),
+            stats_updated_at = datetime('now')
+        WHERE stats_new IS NULL OR stats_new = 0;
+      `);
     } catch (error) {
       console.error('Error migrating to unified model:', error);
       throw error;
@@ -359,6 +426,184 @@ export class LocalDatabase {
     }
   }
 
+  /** Build study queue: due reviews -> learning -> new */
+  async getStudyQueue(deckId: string) {
+    const db = await this.getDb();
+    await this.ensureProgressTable(db);
+    const nowIso = new Date().toISOString();
+    // Due review cards
+    const dueReviews = await db.getAllAsync<any>(
+      `SELECT f.* FROM custom_flashcards f
+         JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+        WHERE f.user_deck_id = ? AND p.status = 'review' AND (p.next_review_at IS NULL OR p.next_review_at <= ?)
+        ORDER BY COALESCE(p.next_review_at, '') ASC, f.position ASC
+      `,
+      [deckId, nowIso]
+    );
+
+    // Learning cards (always due)
+    const learning = await db.getAllAsync<any>(
+      `SELECT f.* FROM custom_flashcards f
+         JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+        WHERE f.user_deck_id = ? AND p.status = 'learning'
+        ORDER BY COALESCE(p.last_reviewed_at, '') ASC, f.position ASC
+      `,
+      [deckId]
+    );
+
+    // New cards: not present in progress table or marked 'new'
+    const news = await db.getAllAsync<any>(
+      `SELECT f.* FROM custom_flashcards f
+        LEFT JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+        WHERE f.user_deck_id = ? AND (p.flashcard_id IS NULL OR p.status = 'new')
+        ORDER BY f.position ASC
+      `,
+      [deckId]
+    );
+
+    return [...dueReviews, ...learning, ...news];
+  }
+
+  /** Apply answer, update per-card progress and aggregate deck stats */
+  async applyAnswer(deckId: string, flashcardId: string, knew: boolean) {
+    const db = await this.getDb();
+    await this.ensureProgressTable(db);
+    const nowIso = new Date().toISOString();
+    const prog = await db.getFirstAsync<any>(
+      `SELECT * FROM custom_flashcard_progress WHERE flashcard_id = ?`,
+      [flashcardId]
+    );
+    const oldStatus: 'new' | 'learning' | 'review' | 'mastered' = (prog?.status ?? 'new');
+
+    let nextStatus: 'new' | 'learning' | 'review' | 'mastered' = oldStatus;
+    let correct = Number(prog?.correct_count ?? 0);
+    let incorrect = Number(prog?.incorrect_count ?? 0);
+    let nextReviewAt: string | null = prog?.next_review_at ?? null;
+
+    if (knew) {
+      correct += 1;
+      if (oldStatus === 'new') {
+        nextStatus = 'learning';
+        // first success: review in 1 hour
+        nextReviewAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      } else if (oldStatus === 'learning') {
+        if (correct >= 2) {
+          nextStatus = 'review';
+          nextReviewAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        } else {
+          nextStatus = 'learning';
+          nextReviewAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
+        }
+      } else if (oldStatus === 'review') {
+        if (correct >= 4) {
+          nextStatus = 'mastered';
+          nextReviewAt = null;
+        } else {
+          nextStatus = 'review';
+          nextReviewAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+        }
+      } else if (oldStatus === 'mastered') {
+        nextStatus = 'mastered';
+        nextReviewAt = null;
+      }
+    } else {
+      incorrect += 1;
+      correct = 0;
+      nextStatus = 'learning';
+      // quick retry window
+      nextReviewAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    }
+
+    // Upsert progress
+    await db.runAsync(
+      `INSERT INTO custom_flashcard_progress (flashcard_id, user_deck_id, status, correct_count, incorrect_count, next_review_at, last_reviewed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(flashcard_id) DO UPDATE SET
+         status = excluded.status,
+         correct_count = excluded.correct_count,
+         incorrect_count = excluded.incorrect_count,
+         next_review_at = excluded.next_review_at,
+         last_reviewed_at = excluded.last_reviewed_at
+      `,
+      [flashcardId, deckId, nextStatus, correct, incorrect, nextReviewAt, nowIso]
+    );
+
+    // Update aggregate stats by deltas based on transition
+    const deltas: { new?: number; learning?: number; review?: number; mastered?: number } = {};
+    if (oldStatus !== nextStatus) {
+      // decrement from old bucket
+      if (oldStatus === 'new') deltas.new = (deltas.new ?? 0) - 1;
+      if (oldStatus === 'learning') deltas.learning = (deltas.learning ?? 0) - 1;
+      if (oldStatus === 'review') deltas.review = (deltas.review ?? 0) - 1;
+      if (oldStatus === 'mastered') deltas.mastered = (deltas.mastered ?? 0) - 1;
+
+      // increment new bucket
+      if (nextStatus === 'new') deltas.new = (deltas.new ?? 0) + 1;
+      if (nextStatus === 'learning') deltas.learning = (deltas.learning ?? 0) + 1;
+      if (nextStatus === 'review') deltas.review = (deltas.review ?? 0) + 1;
+      if (nextStatus === 'mastered') deltas.mastered = (deltas.mastered ?? 0) + 1;
+
+      await this.updateDeckStats(deckId, deltas);
+    }
+  }
+
+  /** Update deck study stats by applying deltas and clamping to >= 0 */
+  async updateDeckStats(userDeckId: string, deltas: { new?: number; learning?: number; review?: number; mastered?: number }): Promise<void> {
+    const db = await this.getDb();
+    const doUpdate = async () => {
+      const current = await db.getFirstAsync<any>(
+        'SELECT stats_new, stats_learning, stats_review, stats_mastered FROM user_decks WHERE id = ?',
+        [userDeckId]
+      );
+      const curNew = Number(current?.stats_new ?? 0);
+      const curLearning = Number(current?.stats_learning ?? 0);
+      const curReview = Number(current?.stats_review ?? 0);
+      const curMastered = Number(current?.stats_mastered ?? 0);
+
+      const nextNew = Math.max(0, curNew + (deltas.new ?? 0));
+      const nextLearning = Math.max(0, curLearning + (deltas.learning ?? 0));
+      const nextReview = Math.max(0, curReview + (deltas.review ?? 0));
+      const nextMastered = Math.max(0, curMastered + (deltas.mastered ?? 0));
+
+      await db.runAsync(
+        `UPDATE user_decks
+         SET stats_new = ?, stats_learning = ?, stats_review = ?, stats_mastered = ?, stats_updated_at = datetime('now'), is_dirty = 1
+         WHERE id = ?`,
+        [nextNew, nextLearning, nextReview, nextMastered, userDeckId]
+      );
+    };
+
+    try {
+      await doUpdate();
+    } catch (error: any) {
+      const msg = String(error?.message || error);
+      if (msg.includes('no such column')) {
+        await this.ensureStatsColumns(db);
+        await doUpdate();
+      } else {
+        console.error('Error updating deck stats:', error);
+        throw error;
+      }
+    }
+  }
+
+  /** Ensure progress table exists (safe to call repeatedly) */
+  private async ensureProgressTable(db: SQLite.SQLiteDatabase): Promise<void> {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS custom_flashcard_progress (
+        flashcard_id TEXT PRIMARY KEY,
+        user_deck_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'new',
+        correct_count INTEGER DEFAULT 0,
+        incorrect_count INTEGER DEFAULT 0,
+        next_review_at TEXT,
+        last_reviewed_at TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_progress_deck ON custom_flashcard_progress (user_deck_id);
+      CREATE INDEX IF NOT EXISTS idx_progress_next_review ON custom_flashcard_progress (next_review_at);
+    `);
+  }
+
   /**
    * Get all user decks for a user (with custom deck data)
    */
@@ -391,6 +636,11 @@ export class LocalDatabase {
           deck_is_active: Boolean(row.deck_is_active),
           deck_created_at: row.deck_created_at,
           deck_updated_at: row.deck_updated_at,
+          // Stats
+          stats_new: row.stats_new ?? 0,
+          stats_learning: row.stats_learning ?? 0,
+          stats_review: row.stats_review ?? 0,
+          stats_mastered: row.stats_mastered ?? 0,
           // Legacy compatibility - populate old fields for backward compatibility
           custom_deck_name: row.deck_name,
           custom_deck_description: row.deck_description,

@@ -41,6 +41,12 @@ export interface UserDeck {
   deck_created_at?: string;
   deck_updated_at?: string;
 
+  // Study stats (local)
+  stats_new?: number;
+  stats_learning?: number;
+  stats_review?: number;
+  stats_mastered?: number;
+
 }
 
 // Custom deck created by user

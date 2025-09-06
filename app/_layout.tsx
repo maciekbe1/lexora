@@ -110,6 +110,7 @@ export default function RootLayout() {
             <Stack.Screen name="(app)" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="deck/[id]" />
+            <Stack.Screen name="study/[deckId]" />
           </Stack>
           {showLangPrefs && (
             <LanguagePreferencesModal

@@ -1,7 +1,7 @@
+import { useAppTheme } from "@/theme/useAppTheme";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useAppTheme } from "@/theme/useAppTheme";
 
 interface DeckInfoProps {
   deckDescription: string;
@@ -21,14 +21,21 @@ export function DeckInfo({
     <>
       {/* Deck Info */}
       <View style={[styles.deckInfo, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.deckDescription, { color: colors.text }]}>{deckDescription}</Text>
+        <Text style={[styles.deckDescription, { color: colors.text }]}>
+          {deckDescription}
+        </Text>
         {deckLanguage && (
-          <Text style={[styles.deckLanguage, { color: colors.mutedText }]}>Język: {deckLanguage}</Text>
+          <Text style={[styles.deckLanguage, { color: colors.mutedText }]}>
+            Język: {deckLanguage}
+          </Text>
         )}
       </View>
 
       {/* Study Button */}
-      <TouchableOpacity style={[styles.studyButton, { backgroundColor: colors.primary }]} onPress={onStartStudy}>
+      <TouchableOpacity
+        style={[styles.studyButton, { backgroundColor: colors.primary }]}
+        onPress={onStartStudy}
+      >
         <Ionicons name="play" size={20} color="#fff" />
         <Text style={styles.studyButtonText}>
           Rozpocznij naukę {flashcardCount > 0 && `(${flashcardCount})`}
@@ -56,7 +63,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginHorizontal: 16,
-    marginBottom: 16,
+    marginTop: 4,
     paddingVertical: 14,
     borderRadius: 8,
   },

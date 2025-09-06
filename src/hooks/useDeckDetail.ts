@@ -2,8 +2,8 @@ import { useDeferredLoading } from "@/hooks/useDeferredLoading";
 import { useFlashcardManagement } from "@/hooks/useFlashcardManagement";
 import { useAuthStore } from "@/store";
 import type { CustomFlashcard } from "@/types/flashcard";
-import { useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useLocalSearchParams, useFocusEffect } from "expo-router";
+import { useCallback, useRef, useState, useEffect } from "react";
 
 export function useDeckDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -23,6 +23,7 @@ export function useDeckDetail() {
     isLoading,
     isDeleting,
     onRefresh,
+    reloadDeck,
     handleCreateFlashcard,
     handleUpdateFlashcard,
     handleDeleteFlashcard,
@@ -83,6 +84,18 @@ export function useDeckDetail() {
       toggle: () => setShowOptionsMenu((v) => !v),
     },
   };
+
+  // Refresh deck data when this screen regains focus (e.g., after a study session)
+  const refreshRef = useRef(onRefresh);
+  useEffect(() => {
+    refreshRef.current = onRefresh;
+  }, [onRefresh]);
+  useFocusEffect(
+    useCallback(() => {
+      // Silent reload to avoid showing RefreshControl animation that shifts content
+      reloadDeck();
+    }, [])
+  );
 
   // Create flashcard handler that handles both create and update
   const handleFlashcardSubmit = editingFlashcard

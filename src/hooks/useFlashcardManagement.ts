@@ -217,8 +217,7 @@ export function useFlashcardManagement(user: User | null, deckId: string) {
       return;
     }
 
-    Alert.alert("Nauka", `Rozpoczynamy naukę z ${flashcards.length} fiszek!`);
-    // TODO: Navigate to study session
+    router.push({ pathname: `/study/${deck.id}` as any });
   };
 
   // Update deck
@@ -334,6 +333,7 @@ export function useFlashcardManagement(user: User | null, deckId: string) {
     isLoading,
     isDeleting,
     onRefresh,
+    reloadDeck: loadDeckData,
     handleCreateFlashcard,
     handleUpdateFlashcard,
     handleDeleteFlashcard,
