@@ -1,14 +1,16 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
+import { AppState } from "react-native";
 import type { UserDeck } from "@/shared/types/flashcard";
-import { useAppInitialization } from "@/shared/hooks/useAppInitialization";
+import { useAppStore } from "@/store";
 import { useDeckManagement } from "@/shared/hooks/useDeckManagement";
 import { useDeferredLoading } from "@/shared/hooks/useDeferredLoading";
 import { useAuthStore } from "@/store";
 
 export function useDashboard() {
   const { user } = useAuthStore();
-  const { isInitialized } = useAppInitialization(user);
+  const { initializedForUserId, initializing } = useAppStore();
+  const isInitialized = Boolean(user) && initializedForUserId === user!.id && !initializing;
   const {
     userDecks,
     refreshing,
@@ -44,6 +46,26 @@ export function useDashboard() {
       }
     }, [isInitialized, lastFetchTime])
   );
+
+  // Exposed pull-to-refresh + header refresh that also stamps last fetch time
+  const handleRefresh = useCallback(async () => {
+    setLastFetchTime(Date.now());
+    await onRefresh();
+  }, [onRefresh]);
+
+  // Refresh on app resume from background (throttled: 30s)
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        const now = Date.now();
+        if (isInitialized && now - lastFetchTime > 30_000) {
+          setLastFetchTime(now);
+          fetchUserDecks();
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [isInitialized, lastFetchTime, fetchUserDecks]);
 
   // Navigation handlers
   const handleDeckPress = (userDeck: UserDeck) => {
@@ -110,7 +132,7 @@ export function useDashboard() {
     handleCreateDeck,
     handleCreateFlashcard,
     handleBrowseTemplates,
-    onRefresh,
+    onRefresh: handleRefresh,
     
     // Modal handlers
     modalHandlers,

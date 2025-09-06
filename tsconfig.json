@@ -6,6 +6,7 @@
     "paths": {
       "@/*": ["src/*"],
       "@/features/*": ["src/features/*"],
+      "@/components/*": ["src/components/*"],
       "@/shared/*": ["src/shared/*"],
       "@/store/*": ["src/store/*"],
       "@/database/*": ["src/database/*"]

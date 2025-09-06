@@ -1,12 +1,12 @@
-import { User } from '@supabase/supabase-js';
-import * as Crypto from 'expo-crypto';
-import React, { useState } from 'react';
-import { Alert } from 'react-native';
-import { supabase } from '../../../lib/supabase';
 import { localDatabase } from '@/shared/services/local-database';
 import { storageService } from '@/shared/services/storage';
 import { syncService } from '@/shared/services/sync';
 import type { CustomDeck, CustomFlashcard, UserDeck } from '@/shared/types/flashcard';
+import { User } from '@supabase/supabase-js';
+import * as Crypto from 'expo-crypto';
+import { useState } from 'react';
+import { Alert } from 'react-native';
+import { supabase } from '../../../lib/supabase';
 
 // Helpers extracted to reduce hook size
 async function syncUser(userId: string) {
@@ -17,13 +17,7 @@ async function syncUser(userId: string) {
   }
 }
 
-async function ensureFixedDeckNames() {
-  try {
-    await localDatabase.fixDeckNames();
-  } catch (error) {
-    console.log('Could not fix deck names:', error);
-  }
-}
+
 
 async function deleteImageSafe(url?: string | null) {
   if (!url) return;
@@ -99,18 +93,13 @@ export function useDeckManagement(user: User | null) {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Fix deck names on hook initialization
-  React.useEffect(() => {
-    if (user) {
-      ensureFixedDeckNames();
-    }
-  }, [user]);
+  // One-time data sanity handled during app initialization (localDatabase.initialize)
+  // Avoid running additional fixers here to reduce extra I/O on navigation.
 
   const fetchUserDecks = async () => {
     if (!user) return;
 
     try {
-      setIsLoading(true);
       const localDecks = await localDatabase.getUserDecks(user.id);
 
       if (localDecks.length > 0) {
@@ -121,9 +110,13 @@ export function useDeckManagement(user: User | null) {
           .autoSync(user.id)
           .catch((error) => console.log('Background sync failed:', error));
 
+        // Do not show skeleton when we already have local data
+        setIsLoading(false);
         return;
       }
 
+      // Cold start: no local data — show loading while fetching remote
+      setIsLoading(true);
       console.log('No local data, fetching from remote...');
       const { data, error } = await supabase
         .from('user_decks')
@@ -154,7 +147,7 @@ export function useDeckManagement(user: User | null) {
     }
   };
 
-  const onRefresh = async () => { setRefreshing(true); await ensureFixedDeckNames(); await fetchUserDecks(); setRefreshing(false); };
+  const onRefresh = async () => { setRefreshing(true); await fetchUserDecks(); setRefreshing(false); };
 
   const deleteCustomDeckCompletely = async (userDeck: UserDeck) => {
     try { await deleteCustomDeckCompletelyHelper(userDeck); await fetchUserDecks(); Alert.alert('Sukces', 'Talia została całkowicie usunięta'); }

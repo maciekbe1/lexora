@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
   ActionSheetIOS,
+  ActivityIndicator,
   Modal,
   Platform,
   StatusBar,
@@ -18,6 +19,8 @@ interface AppHeaderProps {
   onAddFlashcard?: () => void;
   onAddLesson?: () => void;
   onSmartCreate?: () => void;
+  refreshing?: boolean;
+  onRefreshPress?: () => void;
 }
 
 export function AppHeader({
@@ -26,6 +29,8 @@ export function AppHeader({
   onAddFlashcard,
   onAddLesson,
   onSmartCreate,
+  refreshing = false,
+  onRefreshPress,
 }: AppHeaderProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const insets = useSafeAreaInsets();
@@ -67,10 +72,25 @@ export function AppHeader({
       <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           <Text style={styles.title}>{title}</Text>
-          {showAddButton && (
-            <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
+          {showAddButton ? (
+            <TouchableOpacity style={styles.rightButton} onPress={handleAddPress}>
               <Ionicons name="add" size={24} color="#007AFF" />
             </TouchableOpacity>
+          ) : onRefreshPress ? (
+            <TouchableOpacity
+              style={styles.rightButton}
+              onPress={onRefreshPress}
+              accessibilityRole="button"
+              accessibilityLabel="Odśwież"
+            >
+              {refreshing ? (
+                <ActivityIndicator size="small" color="#007AFF" />
+              ) : (
+                <Ionicons name="refresh" size={22} color="#007AFF" />
+              )}
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.rightButtonPlaceholder} />
           )}
         </View>
       </View>
@@ -155,6 +175,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
     alignItems: "center",
     justifyContent: "center",
+  },
+  rightButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f0f0f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rightButtonPlaceholder: {
+    width: 40,
+    height: 40,
   },
   modalOverlay: {
     flex: 1,

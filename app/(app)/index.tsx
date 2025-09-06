@@ -65,7 +65,13 @@ export default function DashboardScreen() {
               userDecks.length === 0 && styles.emptyList,
             ]}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#007AFF"
+                colors={["#007AFF"]}
+                progressBackgroundColor="#ffffff"
+              />
             }
             ListEmptyComponent={
               <EmptyDeckState

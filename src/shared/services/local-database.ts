@@ -217,37 +217,7 @@ export class LocalDatabase {
     }
   }
 
-  /**
-   * Publicly accessible method to fix existing deck names
-   */
-  async fixDeckNames(): Promise<void> {
-    const db = await this.getDb();
-    await this.fixExistingCustomDecks(db);
-    await this.fixDeckFlashcardCounts(db);
-  }
-
-  /**
-   * Fix flashcard counts for all custom decks
-   */
-  private async fixDeckFlashcardCounts(db: SQLite.SQLiteDatabase): Promise<void> {
-    try {
-      console.log('Fixing deck flashcard counts...');
-      
-      // Get all custom decks
-      const customDecks = await db.getAllAsync<{ id: string }>(
-        `SELECT id FROM user_decks WHERE is_custom = 1`
-      );
-      
-      // Update count for each deck
-      for (const deck of customDecks) {
-        await this.updateDeckFlashcardCount(deck.id);
-      }
-      
-      console.log(`Fixed flashcard counts for ${customDecks.length} custom decks`);
-    } catch (error) {
-      console.error('Error fixing deck flashcard counts:', error);
-    }
-  }
+  // Removed legacy fix methods: fixDeckNames and fixDeckFlashcardCounts (no longer needed)
 
   /**
    * Insert or update user deck

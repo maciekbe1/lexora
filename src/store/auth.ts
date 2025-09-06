@@ -2,6 +2,7 @@ import { signInWithApple, signInWithGoogle } from '@/shared/services/supabase-oa
 import { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
 import { supabase } from '../../lib/supabase';
+import { useAppStore } from './app';
 
 interface AuthState {
   // State
@@ -128,6 +129,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ error: error.message, loading: false });
         return;
       }
+
+      // Reset app initialization on logout
+      try { useAppStore.getState().resetInit(); } catch { /* empty */ }
 
       set({
         user: null,

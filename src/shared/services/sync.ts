@@ -92,8 +92,7 @@ export class SyncService {
         }
       }
 
-      // After syncing from remote, recalculate flashcard counts for all custom decks
-      await localDatabase.fixDeckNames(); // This now includes fixing flashcard counts
+      // After syncing from remote, counts are updated during inserts; extra fix step no longer needed
       
       console.log('Sync from remote completed');
     } catch (error) {

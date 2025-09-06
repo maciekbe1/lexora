@@ -12,7 +12,7 @@ import {
   FlashcardItem,
   FlashcardItemSkeleton,
 } from "@/shared/components/features/flashcards";
-import { useDeckDetail } from "@/shared/hooks";
+import { useDeckDetail } from "@/shared/hooks/useDeckDetail";
 import type { CustomFlashcard } from "@/shared/types/flashcard";
 import React from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
