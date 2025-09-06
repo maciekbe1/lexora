@@ -1,3 +1,4 @@
+import * as SecureStore from 'expo-secure-store';
 import { Appearance, ColorSchemeName } from 'react-native';
 import { create } from 'zustand';
 
@@ -19,8 +20,23 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   mode: 'system',
   systemScheme: ((Appearance.getColorScheme() || 'light') as NonNullable<ColorSchemeName>),
   effective: computeEffective('system', (Appearance.getColorScheme() || 'light') as 'light' | 'dark'),
-  setMode: (mode: ThemeMode) => set((state) => ({ mode, effective: computeEffective(mode, state.systemScheme) })),
+  setMode: (mode: ThemeMode) => {
+    // persist asynchronously; no need to await
+    SecureStore.setItemAsync('lexora_theme_mode', mode).catch(() => {});
+    set((state) => ({ mode, effective: computeEffective(mode, state.systemScheme) }));
+  },
   init: () => {
+    // Load persisted mode if available
+    SecureStore.getItemAsync('lexora_theme_mode')
+      .then((saved) => {
+        if (!saved) return;
+        if (saved === 'system' || saved === 'light' || saved === 'dark') {
+          const { systemScheme } = get();
+          set({ mode: saved, effective: computeEffective(saved, systemScheme) });
+        }
+      })
+      .catch(() => {});
+
     const listener = ({ colorScheme }: { colorScheme: ColorSchemeName }) => {
       const scheme = (colorScheme || 'light') as NonNullable<ColorSchemeName>;
       const { mode } = get();
@@ -30,7 +46,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     return () => {
       try {
         // RN >= 0.65 returns subscription with remove()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         (sub as any)?.remove?.();
       } catch {
         // ignore
