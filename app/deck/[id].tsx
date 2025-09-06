@@ -53,12 +53,7 @@ export default function DeckDetailScreen() {
     item: CustomFlashcard;
     index: number;
   }) => (
-    <FlashcardItem
-      flashcard={item}
-      index={index}
-      onEdit={handleEditFlashcard}
-      onDelete={handleDeleteFlashcard}
-    />
+    <FlashcardItem flashcard={item} index={index} onEdit={handleEditFlashcard} />
   );
 
   // Render empty state using the EmptyFlashcardsState component
@@ -146,6 +141,7 @@ export default function DeckDetailScreen() {
         userDecks={deck ? [deck] : []} // Only show current deck
         preselectedDeckId={deck?.id}
         editingFlashcard={editingFlashcard}
+        onDeleteFlashcard={(f) => handleDeleteFlashcard(f, { skipConfirm: true })}
       />
 
       {/* Edit Deck Modal */}

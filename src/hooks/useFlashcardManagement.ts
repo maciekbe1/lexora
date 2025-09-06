@@ -169,8 +169,28 @@ export function useFlashcardManagement(user: User | null, deckId: string) {
     }
   };
 
-  // Delete flashcard
-  const handleDeleteFlashcard = async (flashcard: CustomFlashcard) => {
+  // Delete flashcard (with optional confirmation skip for callers that already confirmed)
+  const handleDeleteFlashcard = async (
+    flashcard: CustomFlashcard,
+    options?: { skipConfirm?: boolean }
+  ) => {
+    const performDelete = async () => {
+      try {
+        if (!user) return;
+        await deleteFlashcardResources(user.id, flashcard);
+        await loadDeckData();
+        Alert.alert("Sukces", "Fiszka została usunięta");
+      } catch (error) {
+        console.error("Error deleting flashcard:", error);
+        Alert.alert("Błąd", "Nie udało się usunąć fiszki");
+      }
+    };
+
+    if (options?.skipConfirm) {
+      await performDelete();
+      return;
+    }
+
     Alert.alert(
       "Usuń fiszkę",
       "Czy na pewno chcesz usunąć tę fiszkę? Tej operacji nie można cofnąć.",
@@ -179,17 +199,7 @@ export function useFlashcardManagement(user: User | null, deckId: string) {
         {
           text: "Usuń",
           style: "destructive",
-          onPress: async () => {
-            try {
-              if (!user) return;
-              await deleteFlashcardResources(user.id, flashcard);
-              await loadDeckData();
-              Alert.alert("Sukces", "Fiszka została usunięta");
-            } catch (error) {
-              console.error("Error deleting flashcard:", error);
-              Alert.alert("Błąd", "Nie udało się usunąć fiszki");
-            }
-          },
+          onPress: performDelete,
         },
       ]
     );
@@ -286,14 +296,16 @@ export function useFlashcardManagement(user: User | null, deckId: string) {
               // Delete deck resources BEFORE navigating back
               await deleteDeckResources(user.id, deck, flashcards);
               
-              console.log('Waiting 1 second for remote deletion to propagate');
-              // Wait for remote deletion to propagate
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              
+              // Fire-and-forget remote sync to process tombstones quickly
+              try { syncService.syncToRemote(); } catch (error) { 
+                // Intentionally ignoring errors here to avoid blocking UI navigation; sync will retry later.
+                console.log('Error during remote sync after deck deletion:', error);
+              }
+
               console.log('Navigating back to main screen');
               // Navigate back after deletion is complete
               router.back();
-              
+
               console.log('Deck deletion successful, showing alert');
               // Show success toast/alert without blocking navigation
               Alert.alert("Sukces", "Talia została usunięta");

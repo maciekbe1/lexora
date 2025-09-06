@@ -115,8 +115,13 @@ export function useDeckManagement(user: User | null) {
         return;
       }
 
-      // Cold start: no local data — show loading while fetching remote
+      // Cold start: no local data — try to push pending deletions first, then fetch remote
       setIsLoading(true);
+      try {
+        await syncService.syncToRemote();
+      } catch (e) {
+        console.log('Cold-start syncToRemote failed (non-fatal):', e);
+      }
       console.log('No local data, fetching from remote...');
       const { data, error } = await supabase
         .from('user_decks')
@@ -131,10 +136,22 @@ export function useDeckManagement(user: User | null) {
         console.error('Error fetching user decks:', error);
         setUserDecks([]);
       } else {
-        setUserDecks(data || []);
+        // Filter out decks that are marked for deletion locally (tombstones)
+        let filtered = data || [];
+        try {
+          const tombstones = await localDatabase.getDeletionQueue();
+          const deckTombstones = new Set(
+            tombstones.filter(t => t.entity_type === 'deck').map(t => t.entity_id)
+          );
+          filtered = filtered.filter(d => !deckTombstones.has(d.id));
+        } catch (err) {
+          // Tombstone filtering errors are non-fatal because they only affect local filtering; continue loading decks.
+          console.log('Tombstone filtering error:', err);
+        }
+        setUserDecks(filtered);
 
-        if (data) {
-          for (const deck of data) {
+        if (filtered) {
+          for (const deck of filtered) {
             await localDatabase.insertUserDeck(deck);
           }
         }

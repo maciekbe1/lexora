@@ -1,5 +1,4 @@
 import type { CustomFlashcard } from "@/types/flashcard";
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
@@ -7,33 +6,17 @@ interface FlashcardItemProps {
   flashcard: CustomFlashcard;
   index: number;
   onEdit: (flashcard: CustomFlashcard) => void;
-  onDelete: (flashcard: CustomFlashcard) => void;
 }
 
-export function FlashcardItem({
-  flashcard,
-  index,
-  onEdit,
-  onDelete,
-}: FlashcardItemProps) {
+export function FlashcardItem({ flashcard, index, onEdit }: FlashcardItemProps) {
   return (
-    <View style={styles.flashcardItem}>
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={() => onEdit(flashcard)}
+      style={styles.flashcardItem}
+    >
       <View style={styles.flashcardHeader}>
         <Text style={styles.flashcardNumber}>#{index + 1}</Text>
-        <View style={styles.flashcardActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => onEdit(flashcard)}
-          >
-            <Ionicons name="pencil" size={20} color="#007AFF" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => onDelete(flashcard)}
-          >
-            <Ionicons name="trash" size={20} color="#FF3B30" />
-          </TouchableOpacity>
-        </View>
       </View>
 
       <View style={styles.flashcardContent}>
@@ -66,7 +49,7 @@ export function FlashcardItem({
           </View>
         ) : null}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -95,13 +78,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#007AFF",
   },
-  flashcardActions: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  actionButton: {
-    padding: 4,
-  },
+  // Removed separate action buttons; whole card is tappable
   flashcardContent: {
     gap: 16,
   },

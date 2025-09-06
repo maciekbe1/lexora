@@ -447,6 +447,32 @@ export class LocalDatabase {
   }
 
   /**
+   * Get a custom deck by id (from custom_decks)
+   */
+  async getCustomDeckById(id: string): Promise<CustomDeck | null> {
+    try {
+      const db = await this.getDb();
+      const row = await db.getFirstAsync<any>('SELECT * FROM custom_decks WHERE id = ?', [id]);
+      if (!row) return null;
+      return {
+        id: row.id,
+        user_id: row.user_id,
+        name: row.name,
+        description: row.description,
+        language: row.language,
+        cover_image_url: row.cover_image_url,
+        tags: typeof row.tags === 'string' ? JSON.parse(row.tags) : (row.tags || []),
+        is_active: Boolean(row.is_active),
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      } as CustomDeck;
+    } catch (error) {
+      console.error('Error getting custom deck by id:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get items that need to be synced (is_dirty = 1)
    */
   async getUnsyncedItems(): Promise<{

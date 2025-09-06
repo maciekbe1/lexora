@@ -1,10 +1,11 @@
 import type { CustomFlashcard, UserDeck } from "@/types/flashcard";
 import React from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { DeckSelector } from "@/components/features/deck";
 import { ImagePickerComponent } from "@/components/features/image-picker";
 import { BaseModal } from "@/components/ui";
+import { getLanguageFlag, SUPPORTED_LANGUAGES } from "@/constants/languages";
 import { useCustomFlashcardForm, UseCustomFlashcardFormParams } from "@/hooks";
 
 interface CustomFlashcardModalProps {
@@ -16,6 +17,7 @@ interface CustomFlashcardModalProps {
   userDecks: UserDeck[]; // Only custom decks
   preselectedDeckId?: string;
   editingFlashcard?: CustomFlashcard | null;
+  onDeleteFlashcard?: (flashcard: CustomFlashcard) => void;
 }
 
 export function CustomFlashcardModal({
@@ -25,6 +27,7 @@ export function CustomFlashcardModal({
   userDecks,
   preselectedDeckId,
   editingFlashcard,
+  onDeleteFlashcard,
 }: CustomFlashcardModalProps) {
   const params: UseCustomFlashcardFormParams = {
     visible,
@@ -38,6 +41,7 @@ export function CustomFlashcardModal({
 
   const {
     customDecks,
+    targetLang,
     frontText,
     backText,
     hintText,
@@ -50,10 +54,12 @@ export function CustomFlashcardModal({
     setHintText,
     setFrontImageUrl,
     setSelectedDeck,
+    setTargetLangOverride,
     markBackEdited,
-    markFrontImageEdited,
     handleCreate,
   } = useCustomFlashcardForm(params);
+
+  const [showLangPicker, setShowLangPicker] = React.useState(false);
 
   return (
     <BaseModal
@@ -105,7 +111,6 @@ export function CustomFlashcardModal({
             <ImagePickerComponent
               imageUrl={frontImageUrl}
               onImageSelected={(url) => {
-                markFrontImageEdited();
                 setFrontImageUrl(url);
               }}
               placeholder="Dodaj zdjęcie do przodu fiszki"
@@ -115,12 +120,41 @@ export function CustomFlashcardModal({
           <View style={styles.formGroup}>
             <View style={styles.labelRow}>
               <Text style={styles.label}>Tył fiszki *</Text>
-              <View style={styles.langBadge}>
-                <Text style={styles.langText}>
-                  {`${(customDecks.find((d) => d.id === selectedDeck)?.deck_language || "").toUpperCase() || "??"}`}
+              <View style={styles.rowRight}>
+                <View style={styles.langBadge}>
+                  <Text style={styles.langText}>
+                    {`${getLanguageFlag(targetLang || "")} ${(targetLang || "??").toUpperCase()}`}
+                  </Text>
+                </View>
+                <Text
+                  accessibilityRole="button"
+                  style={styles.changeLangButton}
+                  onPress={() => setShowLangPicker((v) => !v)}
+                >
+                  Zmień
                 </Text>
               </View>
             </View>
+            {showLangPicker && (
+              <View style={styles.langPicker}>
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <Text
+                    key={lang.code}
+                    accessibilityRole="button"
+                    style={[
+                      styles.langOption,
+                      lang.code === targetLang && styles.langOptionActive,
+                    ]}
+                    onPress={() => {
+                      setTargetLangOverride(lang.code);
+                      setShowLangPicker(false);
+                    }}
+                  >
+                    {`${lang.flag} ${lang.name}`}
+                  </Text>
+                ))}
+              </View>
+            )}
             <TextInput
               style={[styles.input, styles.textArea]}
               value={backText}
@@ -158,6 +192,34 @@ export function CustomFlashcardModal({
             />
             <Text style={styles.charCounter}>{hintText.length}/200</Text>
           </View>
+          {editingFlashcard && onDeleteFlashcard ? (
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Akcje</Text>
+              <Text
+                accessibilityRole="button"
+                style={styles.deleteButton}
+                onPress={() => {
+                  Alert.alert(
+                    "Usuń fiszkę",
+                    "Czy na pewno chcesz usunąć tę fiszkę? Tej operacji nie można cofnąć.",
+                    [
+                      { text: "Anuluj", style: "cancel" },
+                      {
+                        text: "Usuń",
+                        style: "destructive",
+                        onPress: () => {
+                          onDeleteFlashcard(editingFlashcard);
+                          onClose();
+                        },
+                      },
+                    ]
+                  );
+                }}
+              >
+                Usuń fiszkę
+              </Text>
+            </View>
+          ) : null}
         </>
       )}
     </BaseModal>
@@ -216,8 +278,48 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  rowRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
   translatingHint: {
     fontSize: 12,
     color: "#8E8E93",
+  },
+  changeLangButton: {
+    color: "#007AFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  langPicker: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#e3e3e7",
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  langOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    fontSize: 14,
+    color: "#1a1a1a",
+  },
+  langOptionActive: {
+    backgroundColor: "#f5f7ff",
+    color: "#007AFF",
+    fontWeight: "600",
+  },
+  deleteButton: {
+    color: "#FF3B30",
+    fontSize: 16,
+    fontWeight: "600",
+    paddingVertical: 12,
+    textAlign: "center",
+    borderWidth: 1,
+    borderColor: "#FF3B30",
+    borderRadius: 8,
   },
 });

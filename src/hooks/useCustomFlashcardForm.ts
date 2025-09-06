@@ -1,3 +1,4 @@
+import { localDatabase } from '@/services/local-database';
 import { translateText } from '@/services/translation';
 import type { CustomFlashcard, UserDeck } from '@/types/flashcard';
 import { useEffect, useRef, useState } from 'react';
@@ -41,11 +42,10 @@ export function useCustomFlashcardForm({
   const [selectedDeck, setSelectedDeck] = useState<string>(preselectedDeckId || '');
   const [isLoading, setIsLoading] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [targetLangOverride, setTargetLangOverride] = useState<string | null>(null);
 
   const backEditedManuallyRef = useRef(false);
   const lastAutoTranslationRef = useRef('');
-  const frontImageEditedRef = useRef(false);
-  const lastAutoImageRef = useRef('');
 
   // Only custom decks are allowed here
   const customDecks = userDecks.filter((d) => d.is_custom);
@@ -79,11 +79,11 @@ export function useCustomFlashcardForm({
     // Intentionally ignore deps to run only on visibility change
   }, [visible]);
 
-  // Debounced auto-translation (PL -> deck language) when creating
+  // Debounced auto-translation (PL -> deck language or override) when creating
   useEffect(() => {
     if (!visible || editingFlashcard) return;
     const deck = customDecks.find((d) => d.id === selectedDeck);
-    const targetLang = normalizeLangCode(deck?.deck_language);
+    const targetLang = normalizeLangCode(targetLangOverride || deck?.deck_language);
 
     if (!targetLang || !frontText.trim()) return;
 
@@ -97,23 +97,48 @@ export function useCustomFlashcardForm({
         if (shouldWrite) {
           setBackText(translated);
         }
-
-        // Also set a representative image for the FRONT side from Unsplash
-        // Use the translated keyword (usually better coverage)
-        const unsplashUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(translated || frontText.trim())}`;
-        const prevAutoImg = lastAutoImageRef.current;
-        const shouldSetImage = !frontImageEditedRef.current || !frontImageUrl.trim() || frontImageUrl === prevAutoImg;
-        if (shouldSetImage) {
-          lastAutoImageRef.current = unsplashUrl;
-          setFrontImageUrl(unsplashUrl);
-        }
       } finally {
         setIsTranslating(false);
       }
     }, 500);
 
     return () => clearTimeout(t);
-  }, [frontText, selectedDeck, visible]);
+  }, [frontText, selectedDeck, targetLangOverride, visible]);
+
+  // Fallback: if deck_language missing on the selected deck, try to read from custom_decks
+  useEffect(() => {
+    if (!visible || !selectedDeck) return;
+    (async () => {
+      const deck = customDecks.find((d) => d.id === selectedDeck);
+      const existing = normalizeLangCode(deck?.deck_language);
+      if (!existing) {
+        const cd = await localDatabase.getCustomDeckById(selectedDeck);
+        const lang = normalizeLangCode(cd?.language);
+        if (lang) {
+          setTargetLangOverride(lang);
+        }
+      }
+    })();
+  }, [visible, selectedDeck]);
+
+  // Imperative translate action (for editing or manual trigger)
+  const translateNow = async (opts?: { force?: boolean }) => {
+    const deck = customDecks.find((d) => d.id === selectedDeck);
+    const targetLang = normalizeLangCode(targetLangOverride || deck?.deck_language);
+    if (!targetLang || !frontText.trim()) return;
+    setIsTranslating(true);
+    try {
+      const translated = await translateText(frontText.trim(), 'pl', targetLang);
+      const prevAuto = lastAutoTranslationRef.current;
+      lastAutoTranslationRef.current = translated;
+      const shouldWrite = opts?.force || !backEditedManuallyRef.current || !backText.trim() || backText === prevAuto;
+      if (shouldWrite) {
+        setBackText(translated);
+      }
+    } finally {
+      setIsTranslating(false);
+    }
+  };
 
   const handleCreate = async () => {
     if (!frontText.trim()) {
@@ -170,6 +195,9 @@ export function useCustomFlashcardForm({
   return {
     // data
     customDecks,
+    targetLang: normalizeLangCode(
+      targetLangOverride || customDecks.find((d) => d.id === selectedDeck)?.deck_language
+    ),
 
     // state
     frontText,
@@ -186,11 +214,12 @@ export function useCustomFlashcardForm({
     setHintText,
     setFrontImageUrl,
     setSelectedDeck,
+    setTargetLangOverride,
     markBackEdited: () => (backEditedManuallyRef.current = true),
-    markFrontImageEdited: () => (frontImageEditedRef.current = true),
 
     // actions
     handleCreate,
     resetForm,
+    translateNow,
   };
 }

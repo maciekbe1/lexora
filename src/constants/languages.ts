@@ -6,6 +6,7 @@ export const SUPPORTED_LANGUAGES: Language[] = [
   { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
   { code: 'fr', name: 'Français', flag: '🇫🇷' },
   { code: 'it', name: 'Italiano', flag: '🇮🇹' },
+  { code: 'pl', name: 'Polski', flag: '🇵🇱' },
 ];
 
 export const getLanguageByCode = (code: string): Language | undefined => {

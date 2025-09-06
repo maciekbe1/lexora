@@ -74,14 +74,22 @@ export class SyncService {
         .select('*')
         .eq('user_id', userId);
 
+      // Exclude items present in local deletion queue (tombstones)
+      const tombstones = await localDatabase.getDeletionQueue();
+      const deckTombstones = new Set(
+        tombstones.filter(t => t.entity_type === 'deck').map(t => t.entity_id)
+      );
+
       if (userDecks) {
         for (const deck of userDecks) {
+          if (deckTombstones.has(deck.id)) continue;
           await localDatabase.insertUserDeck(deck);
         }
       }
 
       if (customDecks) {
         for (const deck of customDecks) {
+          if (deckTombstones.has(deck.id)) continue;
           // Ensure tags is an array if it comes as JSON string from remote
           const deckToInsert = {
             ...deck,
