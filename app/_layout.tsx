@@ -10,6 +10,7 @@ import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemedContainer } from "@/theme/ThemedContainer";
+import { useUIOverlayStore } from "@/store";
 
 export default function RootLayout() {
   const { user, loading, initialize } = useAuthStore();
@@ -98,11 +99,14 @@ export default function RootLayout() {
         <StatusBar style={effective === "dark" ? "light" : "dark"} />
         <ThemedContainer>
         <EdgeBackGesture>
+          {/** Disable native back-swipe when any overlay is visible (iOS) */}
+          <OverlayBackGestureGuard>
           <Stack
             screenOptions={{
               headerShown: false, // keep custom headers; gestures still enabled
-              gestureEnabled: true,
-              fullScreenGestureEnabled: Platform.OS === "ios",
+              gestureEnabled: useUIOverlayStore.getState().overlayCount === 0,
+              fullScreenGestureEnabled:
+                Platform.OS === "ios" && useUIOverlayStore.getState().overlayCount === 0,
               animation: Platform.OS === "ios" ? "default" : "slide_from_right",
               gestureDirection: "horizontal",
             }}
@@ -112,6 +116,7 @@ export default function RootLayout() {
             <Stack.Screen name="deck/[id]" />
             <Stack.Screen name="study/[deckId]" />
           </Stack>
+          </OverlayBackGestureGuard>
           {showLangPrefs && (
             <LanguagePreferencesModal
               visible={showLangPrefs}
@@ -133,4 +138,11 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+// Forces a re-render of Stack when overlayCount changes so screenOptions pick up the new value
+function OverlayBackGestureGuard({ children }: { children: React.ReactNode }) {
+  // Subscribe to overlayCount to force re-render when it changes
+  useUIOverlayStore((s) => s.overlayCount);
+  return <>{children}</>;
 }

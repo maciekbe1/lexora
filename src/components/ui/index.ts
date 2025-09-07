@@ -5,3 +5,4 @@ export * from "./LoadingScreen";
 export * from "./OAuthButton";
 export * from "./ModalHeader";
 export * from "./DragHandle";
+export * from "./TopGestureZone";

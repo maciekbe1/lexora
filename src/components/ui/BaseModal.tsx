@@ -1,4 +1,5 @@
 import { DragHandle } from "@/components/ui/DragHandle";
+import { TopGestureZone } from "@/components/ui/TopGestureZone";
 import { ModalHeader } from "@/components/ui/ModalHeader";
 import { useBaseModal } from "@/hooks/useBaseModal";
 import { ThemedSurface } from "@/theme/ThemedSurface";
@@ -86,6 +87,8 @@ export function BaseModal({
           withBorder={false}
           withShadow={true}
         >
+          {/* Global top gesture zone to reliably catch downward drags */}
+          <TopGestureZone height={64} {...(panResponder.panHandlers as any)} />
           {/* Drag area with gestures */}
           <View style={styles.dragArea} {...panResponder.panHandlers}>
             <DragHandle onPress={dismissWithAnimation} />
@@ -144,7 +147,6 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   modalContent: {
-    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     flex: 1,

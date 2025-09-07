@@ -14,19 +14,14 @@ import {
 } from "@/components/features/flashcards";
 import { useDeckDetail } from "@/hooks/useDeckDetail";
 import type { CustomFlashcard } from "@/types/flashcard";
-import React, { useEffect } from "react";
+import React from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { useAppTheme } from "@/theme/useAppTheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation } from "expo-router";
-import { Platform } from "react-native";
-import { useUIOverlayStore } from "@/store";
 
 export default function DeckDetailScreen() {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
-  const overlayCount = useUIOverlayStore((s) => s.overlayCount);
   const {
     deck,
     flashcards,
@@ -52,14 +47,6 @@ export default function DeckDetailScreen() {
     modalHandlers,
   } = useDeckDetail();
 
-  // Disable back-swipe when any modal/sheet is visible
-  useEffect(() => {
-    // @ts-ignore - runtime option exists on native stack
-    navigation.setOptions({
-      gestureEnabled: overlayCount === 0,
-      fullScreenGestureEnabled: overlayCount === 0 && Platform.OS === "ios",
-    });
-  }, [overlayCount, navigation]);
 
   // Render flashcard item using the FlashcardItem component
   const renderFlashcardItem = ({

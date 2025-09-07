@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { useAppTheme } from "@/theme/useAppTheme";
 
 type DragHandleProps = {
   onPress: () => void;
@@ -9,6 +10,7 @@ type DragHandleProps = {
 };
 
 export function DragHandle({ onPress, panHandlers }: DragHandleProps) {
+  const { colors } = useAppTheme();
   return (
     <View
       style={styles.container}
@@ -20,7 +22,7 @@ export function DragHandle({ onPress, panHandlers }: DragHandleProps) {
         onPress={onPress}
         hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
       >
-        <View style={styles.indicator} />
+        <View style={[styles.indicator, { backgroundColor: colors.border }]} />
       </TouchableOpacity>
     </View>
   );
@@ -28,10 +30,5 @@ export function DragHandle({ onPress, panHandlers }: DragHandleProps) {
 
 const styles = StyleSheet.create({
   container: { alignItems: "center", paddingTop: 16, paddingBottom: 10 },
-  indicator: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#c7c7cc",
-  },
+  indicator: { width: 36, height: 4, borderRadius: 2 },
 });

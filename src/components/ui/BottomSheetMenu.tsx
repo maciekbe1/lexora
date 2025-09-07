@@ -2,6 +2,7 @@ import { useAppTheme } from "@/theme/useAppTheme";
 import { useBaseModal } from "@/hooks/useBaseModal";
 import React from "react";
 import { Animated, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import { TopGestureZone } from "@/components/ui/TopGestureZone";
 
 type BottomSheetMenuProps = {
   visible: boolean;
@@ -46,7 +47,7 @@ export function BottomSheetMenu({
         {...panResponder.panHandlers}
       >
         {/* Top gesture zone to reliably catch downward drags on the header area */}
-        <View style={styles.gestureZone} {...panResponder.panHandlers} />
+        <TopGestureZone height={64} {...panResponder.panHandlers as any} />
         <View
           style={styles.handle}
           pointerEvents="box-only"
@@ -111,13 +112,4 @@ const styles = StyleSheet.create({
   handle: { alignItems: "center", paddingTop: 12, paddingBottom: 6 },
   indicator: { width: 36, height: 4, borderRadius: 2 },
   content: { paddingVertical: 12 },
-  gestureZone: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 64,
-    // transparent touch-capture layer
-    backgroundColor: "transparent",
-  },
 });
