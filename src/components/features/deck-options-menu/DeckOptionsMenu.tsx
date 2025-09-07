@@ -1,8 +1,11 @@
+import { CancelFooterButton } from "@/components/ui/CancelFooterButton";
+import { useAppTheme } from "@/theme/useAppTheme";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   ActivityIndicator,
   Animated,
+  Dimensions,
   GestureResponderEvent,
   PanResponder,
   Platform,
@@ -10,9 +13,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Dimensions,
 } from "react-native";
-import { useAppTheme } from "@/theme/useAppTheme";
 
 interface DeckOptionsMenuProps {
   visible: boolean;
@@ -29,12 +30,12 @@ export function DeckOptionsMenu({
   onDeleteDeck,
   isDeleting = false,
 }: DeckOptionsMenuProps) {
-  const { colors } = useAppTheme();
+  const { colors, mode } = useAppTheme();
   const translateY = React.useRef(new Animated.Value(0)).current;
   const backdropOpacity = React.useRef(new Animated.Value(0)).current;
   const menuHeightRef = React.useRef(0);
   const isClosingRef = React.useRef(false);
-  
+
   // Unified gesture thresholds (same as BaseModal)
   const DRAG_ACTIVATION_DY = 6;
   const DISMISS_DISTANCE = 100;
@@ -57,31 +58,35 @@ export function DeckOptionsMenu({
     }).start();
   }, [translateY, backdropOpacity]);
 
-  const dismissWithAnimation = React.useCallback((afterClose?: unknown) => {
-    if (isClosingRef.current) return;
-    isClosingRef.current = true;
-    const distance = menuHeightRef.current > 0 ? menuHeightRef.current + 40 : 200;
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: distance,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-      Animated.timing(backdropOpacity, {
-        toValue: 0,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onClose();
-      // Run the follow-up action (e.g., open edit modal) after closing
-      // Defer to the next frame to avoid scheduling updates during insertion
-      requestAnimationFrame(() => {
-        isClosingRef.current = false;
-        if (typeof afterClose === 'function') (afterClose as () => void)();
+  const dismissWithAnimation = React.useCallback(
+    (afterClose?: unknown) => {
+      if (isClosingRef.current) return;
+      isClosingRef.current = true;
+      const distance =
+        menuHeightRef.current > 0 ? menuHeightRef.current + 40 : 200;
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: distance,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+        Animated.timing(backdropOpacity, {
+          toValue: 0,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        onClose();
+        // Run the follow-up action (e.g., open edit modal) after closing
+        // Defer to the next frame to avoid scheduling updates during insertion
+        requestAnimationFrame(() => {
+          isClosingRef.current = false;
+          if (typeof afterClose === "function") (afterClose as () => void)();
+        });
       });
-    });
-  }, [onClose, translateY, backdropOpacity]);
+    },
+    [onClose, translateY, backdropOpacity]
+  );
 
   React.useEffect(() => {
     if (visible) {
@@ -96,11 +101,12 @@ export function DeckOptionsMenu({
       onPanResponderMove: (_evt, g) => {
         const dy = Math.max(0, g.dy);
         translateY.setValue(dy);
-        const screenHeight = Dimensions.get('window').height || 800;
+        const screenHeight = Dimensions.get("window").height || 800;
         backdropOpacity.setValue(Math.max(0, 1 - dy / screenHeight));
       },
       onPanResponderRelease: (_evt, g) => {
-        const shouldDismiss = g.vy > DISMISS_VELOCITY || g.dy > DISMISS_DISTANCE;
+        const shouldDismiss =
+          g.vy > DISMISS_VELOCITY || g.dy > DISMISS_DISTANCE;
         if (shouldDismiss) dismissWithAnimation();
         else
           Animated.spring(translateY, {
@@ -135,7 +141,11 @@ export function DeckOptionsMenu({
         />
       </Animated.View>
       <Animated.View
-        style={[styles.optionsMenu, { transform: [{ translateY }] }, { backgroundColor: colors.surface }]}
+        style={[
+          styles.optionsMenu,
+          { transform: [{ translateY }] },
+          { backgroundColor: colors.surface },
+        ]}
         onLayout={(e) => {
           menuHeightRef.current = e.nativeEvent.layout.height;
         }}
@@ -155,26 +165,57 @@ export function DeckOptionsMenu({
         </View>
 
         <View style={styles.menuContent}>
-          <Text style={[styles.menuTitle, { color: colors.text }]}>Opcje talii</Text>
-          
-          <TouchableOpacity style={[styles.optionItem, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={handleEditDeck}>
-            <View style={[styles.optionIcon, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.menuTitle, { color: colors.text }]}>
+            Opcje talii
+          </Text>
+
+          <TouchableOpacity
+            style={[
+              styles.optionItem,
+              { borderColor: colors.border, backgroundColor: colors.surface },
+            ]}
+            onPress={handleEditDeck}
+          >
+            <View
+              style={[styles.optionIcon, { backgroundColor: colors.surface }]}
+            >
               <Ionicons name="pencil" size={20} color={colors.primary} />
             </View>
             <View style={styles.optionTextContainer}>
-              <Text style={[styles.optionTitle, { color: colors.text }]}>Edytuj talię</Text>
-              <Text style={[styles.optionSubtitle, { color: colors.mutedText }]}>
+              <Text style={[styles.optionTitle, { color: colors.text }]}>
+                Edytuj talię
+              </Text>
+              <Text
+                style={[styles.optionSubtitle, { color: colors.mutedText }]}
+              >
                 Zmień nazwę, opis lub okładkę
               </Text>
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.optionItem, styles.deleteOption]}
+          <TouchableOpacity
+            style={[
+              styles.optionItem,
+              {
+                backgroundColor: (mode === "dark"
+                  ? "rgba(255,59,48,0.10)"
+                  : "#fff5f5") as any,
+                borderColor: colors.border,
+              },
+            ]}
             onPress={handleDeleteDeck}
             disabled={isDeleting}
           >
-            <View style={[styles.optionIcon, styles.deleteIcon]}>
+            <View
+              style={[
+                styles.optionIcon,
+                {
+                  backgroundColor: (mode === "dark"
+                    ? "rgba(255,59,48,0.10)"
+                    : "#fff5f5") as any,
+                },
+              ]}
+            >
               {isDeleting ? (
                 <ActivityIndicator size="small" color="#FF3B30" />
               ) : (
@@ -186,29 +227,13 @@ export function DeckOptionsMenu({
                 {isDeleting ? "Usuwanie..." : "Usuń talię"}
               </Text>
               <Text style={[styles.optionSubtitle, styles.deleteSubtitle]}>
-                {isDeleting 
-                  ? "Proszę czekać..." 
-                  : "Usuń talię i wszystkie fiszki na zawsze"
-                }
+                {isDeleting
+                  ? "Proszę czekać..."
+                  : "Usuń talię i wszystkie fiszki na zawsze"}
               </Text>
             </View>
           </TouchableOpacity>
-
-          <View style={styles.menuFooter}>
-            <TouchableOpacity
-              style={[styles.optionItem, styles.cancelAction]}
-              onPress={() => dismissWithAnimation()}
-            >
-              <View style={[styles.optionIcon, styles.cancelIcon]}>
-                <Ionicons name="close" size={20} color="#666" />
-              </View>
-              <View style={styles.optionTextContainer}>
-                <Text style={[styles.optionTitle, { color: colors.text }]}>
-                  Anuluj
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
+          <CancelFooterButton onPress={() => dismissWithAnimation()} />
         </View>
       </Animated.View>
     </View>
@@ -297,14 +322,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e1e5e9",
   },
-  deleteOption: {
-    backgroundColor: "#fff5f5",
-    borderColor: "#ffe0e0",
-  },
-  cancelAction: {
-    backgroundColor: "#f8f9fa",
-    borderColor: "#e9ecef",
-  },
   optionIcon: {
     width: 40,
     height: 40,
@@ -321,12 +338,6 @@ const styles = StyleSheet.create({
   },
   editIcon: {
     backgroundColor: "#f0f8ff",
-  },
-  deleteIcon: {
-    backgroundColor: "#fff5f5",
-  },
-  cancelIcon: {
-    backgroundColor: "#f8f9fa",
   },
   optionTextContainer: {
     flex: 1,
@@ -346,8 +357,5 @@ const styles = StyleSheet.create({
   },
   deleteSubtitle: {
     color: "#FF3B30",
-  },
-  cancelText: {
-    color: "#666",
   },
 });
