@@ -22,20 +22,11 @@ type Props = {
   maxHeightPercent?: number;
 };
 
-export function OptionsMenu({
-  visible,
-  onClose,
-  title,
-  options,
-  maxHeightPercent,
-}: Props) {
+export function OptionsMenu({ visible, onClose, title, options, maxHeightPercent }: Props) {
   const { colors, mode } = useAppTheme();
   return (
-    <BottomSheetMenu
-      visible={visible}
-      onClose={onClose}
-      maxHeightPercent={maxHeightPercent}
-    >
+    <BottomSheetMenu visible={visible} onClose={onClose} maxHeightPercent={maxHeightPercent}>
+      {(dismiss) => (
       <View style={styles.content}>
         {title ? (
           <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
@@ -77,20 +68,13 @@ export function OptionsMenu({
                   </Text>
                 ) : null}
               </View>
-              <Text
-                style={styles.touch}
-                onPress={() => {
-                  onClose();
-                  opt.onPress();
-                }}
-              />
+              <Text style={styles.touch} onPress={() => { dismiss(); setTimeout(() => opt.onPress(), 260); }} />
             </View>
           );
         })}
-        <View style={styles.bottom}>
-          <CancelFooterButton onPress={onClose} />
-        </View>
+        <View style={styles.bottom}><CancelFooterButton onPress={dismiss} /></View>
       </View>
+      )}
     </BottomSheetMenu>
   );
 }

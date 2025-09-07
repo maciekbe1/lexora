@@ -14,7 +14,7 @@ import {
 type BottomSheetMenuProps = {
   visible: boolean;
   onClose: () => void;
-  children: React.ReactNode;
+  children: React.ReactNode | ((dismiss: () => void) => React.ReactNode);
   maxHeightPercent?: number | undefined;
 };
 
@@ -102,6 +102,8 @@ export function BottomSheetMenu({
     })
   ).current;
 
+  const dismiss = React.useCallback(() => dismissWithAnimation(), [dismissWithAnimation]);
+  const rendered = typeof children === 'function' ? (children as (d: () => void) => React.ReactNode)(dismiss) : children;
   if (!visible) return null;
 
   return (
@@ -143,7 +145,7 @@ export function BottomSheetMenu({
           </TouchableOpacity>
         </View>
 
-        <View style={styles.content}>{children}</View>
+        <View style={styles.content}>{rendered}</View>
       </Animated.View>
     </View>
   );
