@@ -4,5 +4,4 @@ export * from "./FloatingActionButton";
 export * from "./LoadingScreen";
 export * from "./OAuthButton";
 export * from "./ModalHeader";
-export * from "./ModalDragHandle";
-
+export * from "./DragHandle";

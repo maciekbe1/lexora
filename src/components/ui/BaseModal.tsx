@@ -1,7 +1,6 @@
-import { ModalDragHandle } from "@/components/ui/ModalDragHandle";
+import { DragHandle } from "@/components/ui/DragHandle";
 import { ModalHeader } from "@/components/ui/ModalHeader";
 import { useBaseModal } from "@/hooks/useBaseModal";
-import { useAppTheme } from "@/theme/useAppTheme";
 import { ThemedSurface } from "@/theme/ThemedSurface";
 import { ReactNode } from "react";
 import {
@@ -43,7 +42,6 @@ export function BaseModal({
   disableScroll = false,
   showCancel = false,
 }: BaseModalProps) {
-  const { colors } = useAppTheme();
   const { translateY, backdropOpacity, panResponder, dismissWithAnimation } =
     useBaseModal({
       visible,
@@ -83,10 +81,14 @@ export function BaseModal({
           },
         ]}
       >
-        <ThemedSurface style={[styles.modalContent]} withBorder={false} withShadow={true}>
+        <ThemedSurface
+          style={[styles.modalContent]}
+          withBorder={false}
+          withShadow={true}
+        >
           {/* Drag area with gestures */}
           <View style={styles.dragArea} {...panResponder.panHandlers}>
-            <ModalDragHandle onPress={dismissWithAnimation} />
+            <DragHandle onPress={dismissWithAnimation} />
             <ModalHeader
               title={title}
               onClose={dismissWithAnimation}
