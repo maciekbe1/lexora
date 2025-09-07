@@ -15,9 +15,7 @@ interface DeckInfoProps {
 export function DeckInfo({
   deckDescription,
   deckLanguage,
-  flashcardCount,
   onStartStudy,
-  dueToday,
   stats,
 }: DeckInfoProps) {
   const { colors } = useAppTheme();
@@ -36,16 +34,28 @@ export function DeckInfo({
         {stats && (
           <View style={[styles.statsRow, { borderTopColor: colors.border }]}>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: "#34C759" }]}>{stats.new}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedText }]}>Nowe</Text>
+              <Text style={[styles.statNumber, { color: "#34C759" }]}>
+                {stats.new}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.mutedText }]}>
+                Nowe
+              </Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: "#FF9500" }]}>{stats.learning}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedText }]}>Uczę się</Text>
+              <Text style={[styles.statNumber, { color: "#FF9500" }]}>
+                {stats.learning}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.mutedText }]}>
+                Uczę się
+              </Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: "#007AFF" }]}>{stats.mastered}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedText }]}>Opanowane</Text>
+              <Text style={[styles.statNumber, { color: "#007AFF" }]}>
+                {stats.mastered}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.mutedText }]}>
+                Opanowane
+              </Text>
             </View>
           </View>
         )}
@@ -57,9 +67,7 @@ export function DeckInfo({
         onPress={onStartStudy}
       >
         <Ionicons name="play" size={20} color="#fff" />
-        <Text style={styles.studyButtonText}>
-          Rozpocznij naukę
-        </Text>
+        <Text style={styles.studyButtonText}>Rozpocznij naukę</Text>
       </TouchableOpacity>
     </>
   );
@@ -82,18 +90,18 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexDirection: "row",
+    justifyContent: "space-around",
   },
-  statItem: { alignItems: 'center' },
-  statNumber: { fontSize: 16, fontWeight: '700' },
+  statItem: { alignItems: "center" },
+  statNumber: { fontSize: 16, fontWeight: "700" },
   statLabel: { fontSize: 11, marginTop: 2 },
   studyButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     marginHorizontal: 16,
-    marginTop: 4,
+    marginTop: 6,
     paddingVertical: 14,
     borderRadius: 8,
   },
