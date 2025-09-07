@@ -8,8 +8,8 @@ interface DeckInfoProps {
   deckLanguage?: string | undefined;
   flashcardCount: number;
   onStartStudy: () => void;
-  dueToday?: number;
-  stats?: { new: number; learning: number; review: number; mastered: number };
+  dueToday?: number | null;
+  stats?: { new: number; learning: number; mastered: number };
 }
 
 export function DeckInfo({
@@ -44,10 +44,6 @@ export function DeckInfo({
               <Text style={[styles.statLabel, { color: colors.mutedText }]}>Uczę się</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: "#FF3B30" }]}>{stats.review}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedText }]}>Powtórka</Text>
-            </View>
-            <View style={styles.statItem}>
               <Text style={[styles.statNumber, { color: "#007AFF" }]}>{stats.mastered}</Text>
               <Text style={[styles.statLabel, { color: colors.mutedText }]}>Opanowane</Text>
             </View>
@@ -62,7 +58,7 @@ export function DeckInfo({
       >
         <Ionicons name="play" size={20} color="#fff" />
         <Text style={styles.studyButtonText}>
-          Rozpocznij naukę {typeof dueToday === 'number' ? `(${dueToday})` : flashcardCount > 0 ? `(${flashcardCount})` : ''}
+          Rozpocznij naukę {dueToday !== null ? `(${dueToday})` : flashcardCount > 0 ? `(${flashcardCount})` : ''}
         </Text>
       </TouchableOpacity>
     </>

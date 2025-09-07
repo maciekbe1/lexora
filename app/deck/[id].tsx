@@ -123,7 +123,6 @@ export default function DeckDetailScreen() {
         stats={{
           new: deck.stats_new ?? 0,
           learning: deck.stats_learning ?? 0,
-          review: deck.stats_review ?? 0,
           mastered: deck.stats_mastered ?? 0,
         }}
         onStartStudy={handleStartStudy}

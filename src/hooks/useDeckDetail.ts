@@ -1,9 +1,10 @@
-import { useDeferredLoading } from "@/hooks/useDeferredLoading";
-import { useFlashcardManagement } from "@/hooks/useFlashcardManagement";
-import { useAuthStore } from "@/store";
+import { localDatabase } from '@/services/local-database';
+import { useAuthStore, useDeckDetailStore } from "@/store";
 import type { CustomFlashcard } from "@/types/flashcard";
 import { useLocalSearchParams, useFocusEffect } from "expo-router";
-import { useCallback, useRef, useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Alert } from 'react-native';
+import { router } from 'expo-router';
 
 export function useDeckDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -14,27 +15,33 @@ export function useDeckDetail() {
   const [showEditDeckModal, setShowEditDeckModal] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [editingFlashcard, setEditingFlashcard] = useState<CustomFlashcard | null>(null);
-  const [dueToday, setDueToday] = useState<number>(0);
 
-  // Use the flashcard management hook
+  // Use deck detail store
   const {
     deck,
     flashcards,
-    refreshing,
-    isLoading,
+    dueToday,
+    isRefreshing,
     isDeleting,
-    onRefresh,
-    reloadDeck,
-    handleCreateFlashcard,
-    handleUpdateFlashcard,
-    handleDeleteFlashcard,
-    handleUpdateDeck,
-    handleDeleteDeck,
-    handleStartStudy,
-  } = useFlashcardManagement(user, id!);
+    loadDeckData,
+    refreshDeck,
+    resetDeck,
+  } = useDeckDetailStore();
 
-  // Loading state
-  const showLoading = useDeferredLoading(isLoading, 200);
+  // Initialize deck data on mount
+  useEffect(() => {
+    if (user?.id && id) {
+      loadDeckData(user.id, id);
+    }
+  }, [user?.id, id, loadDeckData]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => resetDeck();
+  }, [resetDeck]);
+
+  // Loading state - offline-first: show data immediately, no skeleton
+  const showLoading = false;
 
   // Derived data
   const deckName = deck?.deck_name || deck?.custom_name || "Talia bez nazwy";
@@ -87,25 +94,94 @@ export function useDeckDetail() {
   };
 
   // Refresh deck data when this screen regains focus (e.g., after a study session)
-  const refreshRef = useRef(onRefresh);
-  useEffect(() => {
-    refreshRef.current = onRefresh;
-  }, [onRefresh]);
   useFocusEffect(
     useCallback(() => {
-      // Silent reload to avoid showing RefreshControl animation that shifts content
-      reloadDeck();
-      // Also refresh due count
-      (async () => {
-        try {
-          if (id) {
-            const count = await (await import('@/services/local-database')).localDatabase.getDeckDueCount(id);
-            setDueToday(count);
-          }
-        } catch {}
-      })();
-    }, [])
+      if (user?.id && id) {
+        loadDeckData(user.id, id);
+      }
+    }, [user?.id, id, loadDeckData])
   );
+
+  // Handle refresh
+  const onRefresh = useCallback(async () => {
+    if (user?.id && id) {
+      await refreshDeck(user.id, id);
+    }
+  }, [user?.id, id, refreshDeck]);
+
+  // CRUD operations
+  const handleCreateFlashcard = useCallback(async (
+    flashcardData: Omit<CustomFlashcard, "id" | "created_at" | "updated_at">
+  ) => {
+    if (!user || !deck) return;
+    try {
+      // Create flashcard locally
+      const flashcardId = require('expo-crypto').randomUUID();
+      const now = new Date().toISOString();
+      const newFlashcard: CustomFlashcard = {
+        id: flashcardId,
+        ...flashcardData,
+        user_deck_id: deck.id,
+        user_id: user.id,
+        position: flashcards.length + 1,
+        created_at: now,
+        updated_at: now,
+      };
+
+      await localDatabase.insertCustomFlashcard(newFlashcard);
+      await localDatabase.recalculateDeckStats(deck.id);
+      
+      // Reload data
+      if (user?.id && id) {
+        await loadDeckData(user.id, id);
+      }
+      
+      Alert.alert("Sukces", "Fiszka została dodana!");
+    } catch (error) {
+      console.error("Error creating flashcard:", error);
+      Alert.alert("Błąd", "Nie udało się dodać fiszki");
+    }
+  }, [user, deck, flashcards.length, id, loadDeckData]);
+
+  const handleStartStudy = useCallback(() => {
+    if (!deck) return;
+    if (flashcards.length === 0) {
+      Alert.alert(
+        "Brak fiszek",
+        "Dodaj najpierw fiszki do talii, żeby rozpocząć naukę"
+      );
+      return;
+    }
+    router.push({ pathname: `/study/${deck.id}` as any });
+  }, [deck, flashcards.length]);
+
+  // Placeholder handlers for now
+  const handleUpdateFlashcard = useCallback(async (
+    _flashcardData: Omit<CustomFlashcard, "id" | "created_at" | "updated_at">,
+    _editingFlashcard: CustomFlashcard
+  ) => {
+    Alert.alert("Info", "Update flashcard - coming soon");
+  }, []);
+
+  const handleDeleteFlashcard = useCallback(async (
+    _flashcard: CustomFlashcard,
+    _options?: { skipConfirm?: boolean }
+  ) => {
+    Alert.alert("Info", "Delete flashcard - coming soon");
+  }, []);
+
+  const handleUpdateDeck = useCallback(async (_deckData: {
+    name: string;
+    description: string;
+    language: string;
+    coverImageUrl: string;
+  }) => {
+    Alert.alert("Info", "Update deck - coming soon");
+  }, []);
+
+  const handleDeleteDeck = useCallback(async () => {
+    Alert.alert("Info", "Delete deck - coming soon");
+  }, []);
 
   // Create flashcard handler that handles both create and update
   const handleFlashcardSubmit = editingFlashcard
@@ -124,7 +200,7 @@ export function useDeckDetail() {
     dueToday,
 
     // States
-    refreshing,
+    refreshing: isRefreshing,
     showLoading,
     isDeleting,
     showAddFlashcardModal,

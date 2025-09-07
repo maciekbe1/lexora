@@ -20,7 +20,6 @@ export function DeckCard({ item, onPress }: DeckCardProps) {
   const flashcardCount = item.deck_flashcard_count || 0;
   const newCount = item.stats_new ?? flashcardCount;
   const learningCount = item.stats_learning ?? 0;
-  const reviewCount = item.stats_review ?? 0;
   const masteredCount = item.stats_mastered ?? 0;
   const dueToday = item.due_today ?? 0;
 
@@ -53,10 +52,6 @@ export function DeckCard({ item, onPress }: DeckCardProps) {
         <View style={styles.statItem}>
           <Text style={[styles.statNumber, { color: "#FF9500" }]}>{learningCount}</Text>
           <Text style={styles.statLabel}>Uczę się</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: "#FF3B30" }]}>{reviewCount}</Text>
-          <Text style={styles.statLabel}>Powtórka</Text>
         </View>
         <View style={styles.statItem}>
           <Text style={[styles.statNumber, { color: "#007AFF" }]}>{masteredCount}</Text>

@@ -4,6 +4,5 @@ export * from './useDashboard';
 export * from './useDeckDetail';
 export * from './useDeckManagement';
 export * from './useDeferredLoading';
-export * from './useFlashcardManagement';
 export * from './useModalAnimation';
 export * from './useModalGestures';

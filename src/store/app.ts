@@ -1,3 +1,4 @@
+import { backgroundSyncService } from '@/services/background-sync';
 import { localDatabase } from '@/services/local-database';
 import { storageService } from '@/services/storage';
 import { syncService } from '@/services/sync';
@@ -9,6 +10,8 @@ interface AppInitState {
   error: string | null;
   initializeIfNeeded: (userId: string) => Promise<void>;
   resetInit: () => void;
+  startBackgroundSync: (userId: string) => void;
+  stopBackgroundSync: () => void;
 }
 
 export const useAppStore = create<AppInitState>((set, get) => ({
@@ -40,6 +43,17 @@ export const useAppStore = create<AppInitState>((set, get) => ({
     }
   },
 
-  resetInit: () => set({ initializedForUserId: null, initializing: false, error: null }),
+  startBackgroundSync: (userId: string) => {
+    backgroundSyncService.startBackgroundSync(userId);
+  },
+
+  stopBackgroundSync: () => {
+    backgroundSyncService.stopBackgroundSync();
+  },
+
+  resetInit: () => {
+    backgroundSyncService.stopBackgroundSync();
+    set({ initializedForUserId: null, initializing: false, error: null });
+  },
 }));
 

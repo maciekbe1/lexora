@@ -1,8 +1,8 @@
 import { EdgeBackGesture } from "@/components/EdgeBackGesture";
 import { LanguagePreferencesModal } from "@/components/features/preferences/LanguagePreferencesModal";
-import { LoadingScreen } from "@/components/ui";
+import { LoadingScreen, Snackbar } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
-import { useAppStore, useAuthStore, usePreferencesStore } from "@/store";
+import { useAppStore, useAuthStore, useNotificationStore, usePreferencesStore } from "@/store";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
@@ -29,6 +29,7 @@ export default function RootLayout() {
     initDefaults,
   } = prefsStore;
   const [showLangPrefs, setShowLangPrefs] = useState(false);
+  const { message, type, visible, hide } = useNotificationStore();
 
   // Initialize auth on app start
   useEffect(() => {
@@ -107,7 +108,7 @@ export default function RootLayout() {
               gestureEnabled: useUIOverlayStore.getState().overlayCount === 0,
               fullScreenGestureEnabled:
                 Platform.OS === "ios" && useUIOverlayStore.getState().overlayCount === 0,
-              animation: Platform.OS === "ios" ? "default" : "slide_from_right",
+              animation: "none", // Remove navigation animations to prevent flash
               gestureDirection: "horizontal",
             }}
           >
@@ -133,6 +134,12 @@ export default function RootLayout() {
               }}
             />
           )}
+          <Snackbar
+            visible={visible}
+            message={message || ''}
+            type={type}
+            onDismiss={hide}
+          />
         </EdgeBackGesture>
         </ThemedContainer>
       </SafeAreaProvider>

@@ -1,21 +1,13 @@
 import { localDatabase } from '@/services/local-database';
 import { storageService } from '@/services/storage';
-import { syncService } from '@/services/sync';
 import type { CustomDeck, CustomFlashcard, UserDeck } from '@/types/flashcard';
 import { User } from '@supabase/supabase-js';
 import * as Crypto from 'expo-crypto';
 import { useState } from 'react';
 import { Alert } from 'react-native';
-import { supabase } from '../../lib/supabase';
 
 // Helpers extracted to reduce hook size
-async function syncUser(userId: string) {
-  try {
-    await syncService.autoSync(userId);
-  } catch (error) {
-    console.log('Could not sync to remote:', error);
-  }
-}
+// Removed syncUser - sync happens only on login and manual refresh
 
 
 
@@ -73,19 +65,16 @@ function buildCustomFlashcard(
   return { id, ...flashcardData, position: nextPosition, created_at: now, updated_at: now };
 }
 
-async function insertAndSyncUserDeck(userId: string, deck: UserDeck) {
+async function insertUserDeck(deck: UserDeck) {
   await localDatabase.insertUserDeck(deck);
-  await syncUser(userId);
 }
 
-async function insertAndSyncCustomDeck(userId: string, deck: CustomDeck) {
+async function insertCustomDeck(deck: CustomDeck) {
   await localDatabase.insertCustomDeck(deck);
-  await syncUser(userId);
 }
 
-async function insertAndSyncFlashcard(userId: string, flashcard: CustomFlashcard) {
+async function insertFlashcard(flashcard: CustomFlashcard) {
   await localDatabase.insertCustomFlashcard(flashcard);
-  await syncUser(userId);
 }
 
 export function useDeckManagement(user: User | null) {
@@ -120,67 +109,15 @@ export function useDeckManagement(user: User | null) {
         console.log(`Loaded ${localDecks.length} decks from local database`);
         setUserDecks(withDue);
 
-        syncService
-          .autoSync(user.id)
-          .catch((error) => console.log('Background sync failed:', error));
-
         // Do not show skeleton when we already have local data
         setIsLoading(false);
         return;
       }
 
-      // Cold start: no local data — try to push pending deletions first, then fetch remote
+      // Cold start: no local data — get from local only (sync already done at app init)
       setIsLoading(true);
-      try {
-        await syncService.syncToRemote();
-      } catch (e) {
-        console.log('Cold-start syncToRemote failed (non-fatal):', e);
-      }
-      console.log('No local data, fetching from remote...');
-      const { data, error } = await supabase
-        .from('user_decks')
-        .select(`
-          *,
-          template_deck:template_decks(*)
-        `)
-        .eq('user_id', user.id)
-        .order('added_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching user decks:', error);
-        setUserDecks([]);
-      } else {
-        // Filter out decks that are marked for deletion locally (tombstones)
-        let filtered = data || [];
-        try {
-          const tombstones = await localDatabase.getDeletionQueue();
-          const deckTombstones = new Set(
-            tombstones.filter(t => t.entity_type === 'deck').map(t => t.entity_id)
-          );
-          filtered = filtered.filter(d => !deckTombstones.has(d.id));
-        } catch (err) {
-          // Tombstone filtering errors are non-fatal because they only affect local filtering; continue loading decks.
-          console.log('Tombstone filtering error:', err);
-        }
-        // Attach due_today counts
-        const withDueRemote = await Promise.all(
-          (filtered || []).map(async (d: any) => {
-            try {
-              const due = await localDatabase.getDeckDueCount(d.id);
-              return { ...d, due_today: due } as UserDeck;
-            } catch {
-              return d as UserDeck;
-            }
-          })
-        );
-        setUserDecks(withDueRemote);
-
-        if (filtered) {
-          for (const deck of filtered) {
-            await localDatabase.insertUserDeck(deck);
-          }
-        }
-      }
+      console.log('No local data found after app initialization');
+      setUserDecks([]);
     } catch (error) {
       console.error('Error fetching user decks:', error);
       setUserDecks([]);
@@ -198,10 +135,13 @@ export function useDeckManagement(user: User | null) {
 
   const removeTemplateFromCollection = async (userDeck: UserDeck) => {
     try {
-      const { error } = await supabase.from('user_decks').delete().eq('id', userDeck.id);
-      if (error) { console.error('Error removing deck:', error); Alert.alert('Błąd', 'Nie udało się usunąć talii'); }
-      else { await fetchUserDecks(); Alert.alert('Sukces', 'Talia została usunięta z kolekcji'); }
-    } catch (error) { console.error('Error removing deck:', error); Alert.alert('Błąd', 'Nie udało się usunąć talii'); }
+      await localDatabase.enqueueDeletion('deck', userDeck.id);
+      await fetchUserDecks();
+      Alert.alert('Sukces', 'Talia została usunięta z kolekcji');
+    } catch (error) { 
+      console.error('Error removing deck:', error); 
+      Alert.alert('Błąd', 'Nie udało się usunąć talii'); 
+    }
   };
 
   const removeDeck = async (userDeck: UserDeck) => {
@@ -252,8 +192,8 @@ export function useDeckManagement(user: User | null) {
 
     try {
       const { customDeck, userDeck } = buildCustomDeck(user, deckData);
-      await insertAndSyncCustomDeck(user.id, customDeck);
-      await insertAndSyncUserDeck(user.id, userDeck);
+      await insertCustomDeck(customDeck);
+      await insertUserDeck(userDeck);
       await fetchUserDecks();
       Alert.alert('Sukces', 'Talia została utworzona!');
     } catch (error) {
@@ -272,7 +212,7 @@ export function useDeckManagement(user: User | null) {
         flashcardData.user_deck_id
       );
       const customFlashcard = buildCustomFlashcard(flashcardData, existingCards.length + 1);
-      await insertAndSyncFlashcard(user.id, customFlashcard);
+      await insertFlashcard(customFlashcard);
       await fetchUserDecks();
       Alert.alert('Sukces', 'Fiszka została dodana!');
     } catch (error) {

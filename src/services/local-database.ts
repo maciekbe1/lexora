@@ -819,7 +819,6 @@ export class LocalDatabase {
   async recalculateDeckStats(userDeckId: string): Promise<void> {
     const db = await this.getDb();
     await this.ensureProgressTable(db);
-    const nowIso = new Date().toISOString();
     
     // Debug: show stats BEFORE recalculation
     await this.debugDeckStats(userDeckId, 'BEFORE RECALC');

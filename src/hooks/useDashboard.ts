@@ -1,5 +1,4 @@
 import { useDeckManagement } from "@/hooks/useDeckManagement";
-import { useDeferredLoading } from "@/hooks/useDeferredLoading";
 import { useAppStore, useAuthStore } from "@/store";
 import type { UserDeck } from "@/types/flashcard";
 import { router, useFocusEffect } from "expo-router";
@@ -13,7 +12,6 @@ export function useDashboard() {
   const {
     userDecks,
     refreshing,
-    isLoading,
     fetchUserDecks,
     onRefresh,
     createCustomDeck,
@@ -109,9 +107,8 @@ export function useDashboard() {
     },
   };
 
-  // Loading state
-  const isDecksLoading = !isInitialized || isLoading;
-  const showLoading = useDeferredLoading(isDecksLoading, 200);
+  // Loading state - offline-first: no skeleton, show data immediately
+  const showLoading = false;
 
   return {
     // Data
