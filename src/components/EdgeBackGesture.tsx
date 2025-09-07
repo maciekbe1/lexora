@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useUIOverlayStore } from "@/store";
 import React, { PropsWithChildren } from "react";
 import { Dimensions, I18nManager, Platform } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -9,9 +10,12 @@ const SWIPE_THRESHOLD = 60; // min drag X to trigger back
 
 export function EdgeBackGesture({ children }: PropsWithChildren) {
   const router = useRouter();
+  const overlayCount = useUIOverlayStore((s) => s.overlayCount);
 
   // iOS has native back-swipe via Stack; only wrap Android
   if (Platform.OS !== "android") return <>{children}</>;
+  // Disable custom back gesture while any modal/sheet overlay is visible
+  if (overlayCount > 0) return <>{children}</>;
   let startX = 0;
   const pan = Gesture.Pan()
     .enabled(true)

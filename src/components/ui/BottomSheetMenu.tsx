@@ -1,15 +1,7 @@
 import { useAppTheme } from "@/theme/useAppTheme";
+import { useBaseModal } from "@/hooks/useBaseModal";
 import React from "react";
-import {
-  Animated,
-  Dimensions,
-  GestureResponderEvent,
-  PanResponder,
-  Platform,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Animated, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 
 type BottomSheetMenuProps = {
   visible: boolean;
@@ -25,82 +17,7 @@ export function BottomSheetMenu({
   maxHeightPercent = 0.7,
 }: BottomSheetMenuProps) {
   const { colors } = useAppTheme();
-  const translateY = React.useRef(new Animated.Value(0)).current;
-  const backdropOpacity = React.useRef(new Animated.Value(0)).current;
-  const menuHeightRef = React.useRef(0);
-  const isClosingRef = React.useRef(false);
-
-  const DRAG_ACTIVATION_DY = 6;
-  const DISMISS_DISTANCE = 100;
-  const DISMISS_VELOCITY = 1.0;
-
-  const animateIn = React.useCallback(() => {
-    translateY.setValue(200);
-    Animated.spring(translateY, {
-      toValue: 0,
-      useNativeDriver: true,
-      damping: 18,
-      mass: 1,
-      stiffness: 120,
-    }).start();
-    backdropOpacity.setValue(0);
-    Animated.timing(backdropOpacity, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, [translateY, backdropOpacity]);
-
-  const dismissWithAnimation = React.useCallback(() => {
-    if (isClosingRef.current) return;
-    isClosingRef.current = true;
-    const distance =
-      menuHeightRef.current > 0 ? menuHeightRef.current + 40 : 260;
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: distance,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-      Animated.timing(backdropOpacity, {
-        toValue: 0,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onClose();
-      requestAnimationFrame(() => {
-        isClosingRef.current = false;
-      });
-    });
-  }, [onClose, translateY, backdropOpacity]);
-
-  React.useEffect(() => {
-    if (visible) animateIn();
-  }, [visible, animateIn]);
-
-  const panResponder = React.useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_: GestureResponderEvent, g) =>
-        Math.abs(g.dy) > Math.abs(g.dx) && g.dy > DRAG_ACTIVATION_DY,
-      onPanResponderMove: (_evt, g) => {
-        const dy = Math.max(0, g.dy);
-        translateY.setValue(dy);
-        const screenHeight = Dimensions.get("window").height || 800;
-        backdropOpacity.setValue(Math.max(0, 1 - dy / screenHeight));
-      },
-      onPanResponderRelease: (_evt, g) => {
-        const shouldDismiss =
-          g.vy > DISMISS_VELOCITY || g.dy > DISMISS_DISTANCE;
-        if (shouldDismiss) dismissWithAnimation();
-        else
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
-      },
-    })
-  ).current;
+  const { translateY, backdropOpacity, panResponder, dismissWithAnimation } = useBaseModal({ visible, onClose });
 
   const dismiss = React.useCallback(() => dismissWithAnimation(), [dismissWithAnimation]);
   const rendered = typeof children === 'function' ? (children as (d: () => void) => React.ReactNode)(dismiss) : children;
@@ -125,14 +42,15 @@ export function BottomSheetMenu({
             maxHeight: `${Math.round(maxHeightPercent * 100)}%`,
           },
         ]}
-        onLayout={(e) => {
-          menuHeightRef.current = e.nativeEvent.layout.height;
-        }}
+        // Allow swipe-to-close from anywhere on the sheet
+        {...panResponder.panHandlers}
       >
+        {/* Top gesture zone to reliably catch downward drags on the header area */}
+        <View style={styles.gestureZone} {...panResponder.panHandlers} />
         <View
           style={styles.handle}
-          {...panResponder.panHandlers}
           pointerEvents="box-only"
+          {...panResponder.panHandlers}
         >
           <TouchableOpacity
             activeOpacity={0.7}
@@ -145,7 +63,9 @@ export function BottomSheetMenu({
           </TouchableOpacity>
         </View>
 
-        <View style={styles.content}>{rendered}</View>
+        <View style={styles.content} {...panResponder.panHandlers}>
+          {rendered}
+        </View>
       </Animated.View>
     </View>
   );
@@ -191,4 +111,13 @@ const styles = StyleSheet.create({
   handle: { alignItems: "center", paddingTop: 12, paddingBottom: 6 },
   indicator: { width: 36, height: 4, borderRadius: 2 },
   content: { paddingVertical: 12 },
+  gestureZone: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 64,
+    // transparent touch-capture layer
+    backgroundColor: "transparent",
+  },
 });

@@ -1,5 +1,7 @@
 import { useModalAnimation } from "./useModalAnimation";
 import { useModalGestures } from "./useModalGestures";
+import { useEffect } from "react";
+import { useUIOverlayStore } from "@/store";
 
 interface UseBaseModalProps {
   visible: boolean;
@@ -7,6 +9,16 @@ interface UseBaseModalProps {
 }
 
 export function useBaseModal({ visible, onClose }: UseBaseModalProps) {
+  const { incOverlay, decOverlay } = useUIOverlayStore();
+  // Track overlay visibility globally to control back gestures
+  useEffect(() => {
+    if (visible) {
+      incOverlay();
+      return () => decOverlay();
+    }
+    return;
+  }, [visible]);
+
   const {
     translateY,
     backdropOpacity,
