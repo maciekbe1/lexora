@@ -2,27 +2,22 @@ import { CustomFlashcardModal } from "@/components/features/custom-flashcard/Cus
 import {
   DeckEditModal,
   DeckHeader,
-  DeckHeaderSkeleton,
   DeckInfo,
-  DeckInfoSkeleton,
 } from "@/components/features/deck";
 import { DeckOptionsMenu } from "@/components/features/deck-options-menu";
 import {
   EmptyFlashcardsState,
   FlashcardItem,
-  FlashcardItemSkeleton,
 } from "@/components/features/flashcards";
 import { useDeckDetail } from "@/hooks/useDeckDetail";
 import type { CustomFlashcard } from "@/types/flashcard";
 import React from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { useAppTheme } from "@/theme/useAppTheme";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDisableBackGestureWhileOverlay } from "@/hooks/useDisableBackGestureWhileOverlay";
 
 export default function DeckDetailScreen() {
   const { colors } = useAppTheme();
-  const insets = useSafeAreaInsets();
   useDisableBackGestureWhileOverlay();
   const {
     deck,
@@ -71,35 +66,16 @@ export default function DeckDetailScreen() {
   );
 
   if (showLoading) {
+    // Show empty state with proper background - no skeletons to prevent flash  
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <DeckHeaderSkeleton />
-        <DeckInfoSkeleton />
-        <FlatList
-          data={[1, 2, 3, 4, 5, 6]}
-          keyExtractor={(i) => String(i)}
-          renderItem={() => <FlashcardItemSkeleton />}
-          contentContainerStyle={[
-            styles.list,
-            { paddingBottom: insets.bottom + 16 },
-          ]}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          showsVerticalScrollIndicator={false}
-        />
-      </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]} />
     );
   }
 
   if (!deck) {
+    // Show empty state with proper background - no error message during loading
     return (
-      <View style={styles.errorContainer}>
-        <DeckHeader
-          deckName="Błąd"
-          flashcardCount={0}
-          isCustomDeck={false}
-          onAddFlashcard={() => {}}
-        />
-      </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]} />
     );
   }
 

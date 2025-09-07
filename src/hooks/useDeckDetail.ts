@@ -21,6 +21,7 @@ export function useDeckDetail() {
     deck,
     flashcards,
     dueToday,
+    isLoading,
     isRefreshing,
     isDeleting,
     loadDeckData,
@@ -40,8 +41,8 @@ export function useDeckDetail() {
     return () => resetDeck();
   }, [resetDeck]);
 
-  // Loading state - offline-first: show data immediately, no skeleton
-  const showLoading = false;
+  // Loading state - use store's loading state  
+  const showLoading = isLoading;
 
   // Derived data
   const deckName = deck?.deck_name || deck?.custom_name || "Talia bez nazwy";
