@@ -47,6 +47,9 @@ export class SyncService {
       // Sync custom flashcards
       await this.syncCustomFlashcards(unsyncedItems.customFlashcards);
       
+      // Sync progress data
+      await this.syncProgressToRemote();
+      
       console.log('Sync to remote completed');
     } catch (error) {
       console.error('Error syncing to remote:', error);
@@ -117,7 +120,8 @@ export class SyncService {
         }
       }
 
-      // After syncing from remote, counts are updated during inserts; extra fix step no longer needed
+      // Sync progress data from remote
+      await this.syncProgressFromRemote(userId);
       
       console.log('Sync from remote completed');
     } catch (error) {
@@ -390,6 +394,108 @@ export class SyncService {
       return !error;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Sync progress data to remote
+   */
+  private async syncProgressToRemote(): Promise<void> {
+    try {
+      // Check if progress table exists in remote
+      const { error: testError } = await supabase
+        .from('custom_flashcard_progress')
+        .select('flashcard_id')
+        .limit(1);
+
+      if (testError && (testError.code === 'PGRST106' || testError.code === 'PGRST205')) {
+        console.log('custom_flashcard_progress table does not exist in remote, skipping progress sync');
+        return;
+      }
+
+      // Get all progress data from local database
+      const progressData = await localDatabase.getAllProgressData();
+      
+      if (progressData.length === 0) {
+        console.log('No progress data to sync');
+        return;
+      }
+
+      // Get all existing flashcard IDs from remote to validate foreign keys
+      const { data: remoteFlashcards } = await supabase
+        .from('custom_flashcards')
+        .select('id');
+
+      const remoteFlashcardIds = new Set(remoteFlashcards?.map(f => f.id) || []);
+
+      // Filter progress data to only include records for flashcards that exist in remote
+      const validProgressData = progressData.filter(progress => {
+        const isValid = remoteFlashcardIds.has(progress.flashcard_id);
+        if (!isValid) {
+          console.log(`Skipping progress for non-existent flashcard: ${progress.flashcard_id}`);
+        }
+        return isValid;
+      });
+
+      if (validProgressData.length === 0) {
+        console.log('No valid progress data to sync (all flashcards missing from remote)');
+        return;
+      }
+
+      // Upsert to Supabase
+      const { error } = await supabase
+        .from('custom_flashcard_progress')
+        .upsert(validProgressData);
+
+      if (error) throw error;
+      
+      console.log(`Synced ${validProgressData.length} progress records (filtered from ${progressData.length})`);
+    } catch (error) {
+      console.error('Error syncing progress to remote:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sync progress data from remote
+   */
+  private async syncProgressFromRemote(userId: string): Promise<void> {
+    try {
+      // Get user's flashcard IDs to filter progress
+      const { data: userFlashcards } = await supabase
+        .from('custom_flashcards')
+        .select('id')
+        .eq('user_id', userId);
+
+      if (!userFlashcards || userFlashcards.length === 0) {
+        console.log('No flashcards found, skipping progress sync');
+        return;
+      }
+
+      const flashcardIds = userFlashcards.map(f => f.id);
+
+      // Fetch progress data for user's flashcards
+      const { data: progressData, error: progressError } = await supabase
+        .from('custom_flashcard_progress')
+        .select('*')
+        .in('flashcard_id', flashcardIds);
+
+      if (progressError && (progressError.code === 'PGRST106' || progressError.code === 'PGRST205')) {
+        console.log('custom_flashcard_progress table does not exist in remote, skipping progress sync from remote');
+        return;
+      }
+
+      if (progressError) throw progressError;
+
+      if (progressData) {
+        for (const progress of progressData) {
+          await localDatabase.upsertProgressData(progress);
+        }
+        console.log(`Synced ${progressData.length} progress records from remote`);
+      }
+    } catch (error) {
+      console.error('Error syncing progress from remote:', error);
+      throw error;
     }
   }
 

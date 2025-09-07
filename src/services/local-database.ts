@@ -80,8 +80,13 @@ export class LocalDatabase {
           status TEXT NOT NULL DEFAULT 'new', -- new | learning | review | mastered
           correct_count INTEGER DEFAULT 0,
           incorrect_count INTEGER DEFAULT 0,
+          repetition INTEGER DEFAULT 0,
+          easiness_factor REAL DEFAULT 2.5,
+          interval_days INTEGER DEFAULT 1,
           next_review_at TEXT,
-          last_reviewed_at TEXT
+          last_reviewed_at TEXT,
+          created_at TEXT,
+          updated_at TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_progress_deck ON custom_flashcard_progress (user_deck_id);
         CREATE INDEX IF NOT EXISTS idx_progress_next_review ON custom_flashcard_progress (next_review_at);
@@ -426,52 +431,39 @@ export class LocalDatabase {
     }
   }
 
-  /** Build study queue: due reviews -> learning -> new -> mastered (so user can still see mastered cards) */
+  /** Build study queue: always show all flashcards with their progress status */
   async getStudyQueue(deckId: string) {
     const db = await this.getDb();
     await this.ensureProgressTable(db);
     const nowIso = new Date().toISOString();
-    // Due review cards
-    const dueReviews = await db.getAllAsync<any>(
-      `SELECT f.*, p.status AS progress_status FROM custom_flashcards f
-         JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
-        WHERE f.user_deck_id = ? AND p.status = 'review' AND (p.next_review_at IS NULL OR p.next_review_at <= ?)
-        ORDER BY COALESCE(p.next_review_at, '') ASC, f.position ASC
+    
+    // Get all flashcards with their progress status
+    const allCards = await db.getAllAsync<any>(
+      `SELECT 
+        f.*,
+        COALESCE(p.status, 'new') AS progress_status,
+        p.next_review_at,
+        p.last_reviewed_at,
+        p.repetition,
+        p.easiness_factor,
+        p.interval_days
+      FROM custom_flashcards f
+      LEFT JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+      WHERE f.user_deck_id = ?
+      ORDER BY 
+        CASE 
+          WHEN p.status = 'review' AND (p.next_review_at IS NULL OR p.next_review_at <= ?) THEN 1
+          WHEN p.status = 'learning' OR p.status IS NULL THEN 2
+          WHEN p.status = 'new' THEN 3
+          WHEN p.status = 'mastered' THEN 4
+          ELSE 5
+        END,
+        f.position ASC
       `,
       [deckId, nowIso]
     );
 
-    // Learning cards (always due)
-    const learning = await db.getAllAsync<any>(
-      `SELECT f.*, p.status AS progress_status FROM custom_flashcards f
-         JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
-        WHERE f.user_deck_id = ? AND p.status = 'learning'
-        ORDER BY COALESCE(p.last_reviewed_at, '') ASC, f.position ASC
-      `,
-      [deckId]
-    );
-
-    // New cards: not present in progress table or marked 'new'
-    const news = await db.getAllAsync<any>(
-      `SELECT f.*, COALESCE(p.status, 'new') AS progress_status FROM custom_flashcards f
-        LEFT JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
-        WHERE f.user_deck_id = ? AND (p.flashcard_id IS NULL OR p.status = 'new')
-        ORDER BY f.position ASC
-      `,
-      [deckId]
-    );
-
-    // Mastered cards at the end (still visible in study per product decision)
-    const mastered = await db.getAllAsync<any>(
-      `SELECT f.*, p.status AS progress_status FROM custom_flashcards f
-         JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
-        WHERE f.user_deck_id = ? AND p.status = 'mastered'
-        ORDER BY COALESCE(p.last_reviewed_at, '') DESC, f.position ASC
-      `,
-      [deckId]
-    );
-
-    return [...dueReviews, ...learning, ...news, ...mastered];
+    return allCards;
   }
 
   /** Count due today (reviews with next_review_at <= now) + learning */
@@ -493,6 +485,70 @@ export class LocalDatabase {
     );
     const due = Number(reviewRow?.c || 0) + Number(learningRow?.c || 0);
     return due;
+  }
+
+  /** Get all progress data for sync */
+  async getAllProgressData() {
+    const db = await this.getDb();
+    await this.ensureProgressTable(db);
+    
+    const rows = await db.getAllAsync<any>(
+      `SELECT * FROM custom_flashcard_progress`
+    );
+    
+    return rows.map(row => ({
+      flashcard_id: row.flashcard_id,
+      user_deck_id: row.user_deck_id,
+      status: row.status,
+      correct_count: row.correct_count,
+      incorrect_count: row.incorrect_count,
+      repetition: row.repetition,
+      easiness_factor: row.easiness_factor,
+      interval_days: row.interval_days,
+      next_review_at: row.next_review_at,
+      last_reviewed_at: row.last_reviewed_at,
+      created_at: row.created_at,
+      updated_at: row.updated_at
+    }));
+  }
+
+  /** Upsert progress data from sync */
+  async upsertProgressData(progress: any) {
+    const db = await this.getDb();
+    await this.ensureProgressTable(db);
+    
+    await db.runAsync(
+      `INSERT INTO custom_flashcard_progress (
+        flashcard_id, user_deck_id, status, correct_count, incorrect_count,
+        repetition, easiness_factor, interval_days, next_review_at, 
+        last_reviewed_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(flashcard_id) DO UPDATE SET
+        status = excluded.status,
+        correct_count = excluded.correct_count,
+        incorrect_count = excluded.incorrect_count,
+        repetition = excluded.repetition,
+        easiness_factor = excluded.easiness_factor,
+        interval_days = excluded.interval_days,
+        next_review_at = excluded.next_review_at,
+        last_reviewed_at = excluded.last_reviewed_at,
+        updated_at = excluded.updated_at
+      `,
+      [
+        progress.flashcard_id,
+        progress.user_deck_id,
+        progress.status,
+        progress.correct_count,
+        progress.incorrect_count,
+        progress.repetition,
+        progress.easiness_factor,
+        progress.interval_days,
+        progress.next_review_at,
+        progress.last_reviewed_at,
+        progress.created_at,
+        progress.updated_at
+      ]
+    );
   }
 
   /** Apply answer, update per-card progress and aggregate deck stats */
@@ -547,16 +603,28 @@ export class LocalDatabase {
 
     // Upsert progress
     await db.runAsync(
-      `INSERT INTO custom_flashcard_progress (flashcard_id, user_deck_id, status, correct_count, incorrect_count, next_review_at, last_reviewed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO custom_flashcard_progress (
+        flashcard_id, user_deck_id, status, correct_count, incorrect_count, 
+        repetition, easiness_factor, interval_days, next_review_at, last_reviewed_at, 
+        created_at, updated_at
+      )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(flashcard_id) DO UPDATE SET
          status = excluded.status,
          correct_count = excluded.correct_count,
          incorrect_count = excluded.incorrect_count,
+         repetition = excluded.repetition,
+         easiness_factor = excluded.easiness_factor,
+         interval_days = excluded.interval_days,
          next_review_at = excluded.next_review_at,
-         last_reviewed_at = excluded.last_reviewed_at
+         last_reviewed_at = excluded.last_reviewed_at,
+         updated_at = excluded.updated_at
       `,
-      [flashcardId, deckId, nextStatus, correct, incorrect, nextReviewAt, nowIso]
+      [
+        flashcardId, deckId, nextStatus, correct, incorrect,
+        prog?.repetition || 0, prog?.easiness_factor || 2.5, prog?.interval_days || 1,
+        nextReviewAt, nowIso, prog?.created_at || nowIso, nowIso
+      ]
     );
 
     // Update aggregate stats by deltas based on transition
@@ -663,6 +731,7 @@ export class LocalDatabase {
 
   /** Ensure progress table exists (safe to call repeatedly) */
   private async ensureProgressTable(db: SQLite.SQLiteDatabase): Promise<void> {
+    // First create basic table if it doesn't exist
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS custom_flashcard_progress (
         flashcard_id TEXT PRIMARY KEY,
@@ -675,6 +744,44 @@ export class LocalDatabase {
       );
       CREATE INDEX IF NOT EXISTS idx_progress_deck ON custom_flashcard_progress (user_deck_id);
       CREATE INDEX IF NOT EXISTS idx_progress_next_review ON custom_flashcard_progress (next_review_at);
+    `);
+
+    // Check and add missing columns one by one
+    const columns = await db.getAllAsync<{name: string}>(`PRAGMA table_info(custom_flashcard_progress)`);
+    const columnNames = columns.map(col => col.name);
+
+    if (!columnNames.includes('repetition')) {
+      await db.execAsync(`ALTER TABLE custom_flashcard_progress ADD COLUMN repetition INTEGER DEFAULT 0`);
+    }
+
+    if (!columnNames.includes('easiness_factor')) {
+      await db.execAsync(`ALTER TABLE custom_flashcard_progress ADD COLUMN easiness_factor REAL DEFAULT 2.5`);
+    }
+
+    if (!columnNames.includes('interval_days')) {
+      await db.execAsync(`ALTER TABLE custom_flashcard_progress ADD COLUMN interval_days INTEGER DEFAULT 1`);
+    }
+
+    if (!columnNames.includes('created_at')) {
+      await db.execAsync(`ALTER TABLE custom_flashcard_progress ADD COLUMN created_at TEXT`);
+    }
+
+    if (!columnNames.includes('updated_at')) {
+      await db.execAsync(`ALTER TABLE custom_flashcard_progress ADD COLUMN updated_at TEXT`);
+    }
+
+    // Update existing records that have NULL values in the new columns
+    const nowIso = new Date().toISOString();
+    await db.execAsync(`
+      UPDATE custom_flashcard_progress 
+      SET 
+        repetition = COALESCE(repetition, 0),
+        easiness_factor = COALESCE(easiness_factor, 2.5),
+        interval_days = COALESCE(interval_days, 1),
+        created_at = COALESCE(created_at, '${nowIso}'),
+        updated_at = COALESCE(updated_at, '${nowIso}')
+      WHERE repetition IS NULL OR easiness_factor IS NULL OR interval_days IS NULL 
+        OR created_at IS NULL OR updated_at IS NULL;
     `);
   }
 

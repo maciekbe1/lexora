@@ -66,7 +66,7 @@ export default function StudyScreen() {
     }
   };
 
-  if (!card) {
+  if (cards.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.topBar}>
@@ -77,10 +77,14 @@ export default function StudyScreen() {
           <View style={styles.topBtn} />
         </View>
         <View style={styles.centerEmpty}>
-          <Text style={{ color: colors.mutedText }}>Brak fiszek do nauki</Text>
+          <Text style={{ color: colors.mutedText }}>Brak fiszek w talii</Text>
         </View>
       </View>
     );
+  }
+
+  if (!card) {
+    return null; // Loading state
   }
 
   return (
