@@ -18,10 +18,12 @@ import React from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { useAppTheme } from "@/theme/useAppTheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useDisableBackGestureWhileOverlay } from "@/hooks/useDisableBackGestureWhileOverlay";
 
 export default function DeckDetailScreen() {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
+  useDisableBackGestureWhileOverlay();
   const {
     deck,
     flashcards,

@@ -81,6 +81,8 @@ export function BaseModal({
             transform: [{ translateY }],
           },
         ]}
+        // Allow swipe-to-close from anywhere on the modal sheet
+        {...(panResponder.panHandlers as any)}
       >
         <ThemedSurface
           style={[styles.modalContent]}
@@ -88,7 +90,7 @@ export function BaseModal({
           withShadow={true}
         >
           {/* Global top gesture zone to reliably catch downward drags */}
-          <TopGestureZone height={64} {...(panResponder.panHandlers as any)} />
+          <TopGestureZone height={96} pointerEvents="box-only" {...(panResponder.panHandlers as any)} />
           {/* Drag area with gestures */}
           <View style={styles.dragArea} {...panResponder.panHandlers}>
             <DragHandle onPress={dismissWithAnimation} />

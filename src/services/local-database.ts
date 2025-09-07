@@ -587,6 +587,49 @@ export class LocalDatabase {
     }
   }
 
+  /** Recalculate deck stats from progress table (repair utility) */
+  async recalculateDeckStats(userDeckId: string): Promise<void> {
+    const db = await this.getDb();
+    await this.ensureProgressTable(db);
+    // Count each bucket
+    const newRow = await db.getFirstAsync<any>(
+      `SELECT COUNT(*) AS c FROM custom_flashcards f
+        LEFT JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+       WHERE f.user_deck_id = ? AND (p.flashcard_id IS NULL OR p.status = 'new')`,
+      [userDeckId]
+    );
+    const learningRow = await db.getFirstAsync<any>(
+      `SELECT COUNT(*) AS c FROM custom_flashcards f
+         JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+        WHERE f.user_deck_id = ? AND p.status = 'learning'`,
+      [userDeckId]
+    );
+    const reviewRow = await db.getFirstAsync<any>(
+      `SELECT COUNT(*) AS c FROM custom_flashcards f
+         JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+        WHERE f.user_deck_id = ? AND p.status = 'review'`,
+      [userDeckId]
+    );
+    const masteredRow = await db.getFirstAsync<any>(
+      `SELECT COUNT(*) AS c FROM custom_flashcards f
+         JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+        WHERE f.user_deck_id = ? AND p.status = 'mastered'`,
+      [userDeckId]
+    );
+
+    const nextNew = Number(newRow?.c || 0);
+    const nextLearning = Number(learningRow?.c || 0);
+    const nextReview = Number(reviewRow?.c || 0);
+    const nextMastered = Number(masteredRow?.c || 0);
+
+    await db.runAsync(
+      `UPDATE user_decks
+         SET stats_new = ?, stats_learning = ?, stats_review = ?, stats_mastered = ?, stats_updated_at = datetime('now'), is_dirty = 1
+       WHERE id = ?`,
+      [nextNew, nextLearning, nextReview, nextMastered, userDeckId]
+    );
+  }
+
   /** Ensure progress table exists (safe to call repeatedly) */
   private async ensureProgressTable(db: SQLite.SQLiteDatabase): Promise<void> {
     await db.execAsync(`

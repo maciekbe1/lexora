@@ -25,6 +25,7 @@ export function useBaseModal({ visible, onClose }: UseBaseModalProps) {
     screenHeight,
     dismissWithAnimation,
     resetToBottom,
+    topStartHeight: 96,
   });
 
   return {

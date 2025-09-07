@@ -16,7 +16,7 @@ export function TopGestureZone({
   height = 64,
   enabled = true,
   top = 0,
-  zIndex = 1,
+  zIndex = 10,
   debugColor,
   style,
   pointerEvents,

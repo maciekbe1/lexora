@@ -18,6 +18,10 @@ export function DeckCard({ item, onPress }: DeckCardProps) {
       ? item.deck_description.trim()
       : "Brak opisu";
   const flashcardCount = item.deck_flashcard_count || 0;
+  const newCount = item.stats_new ?? flashcardCount;
+  const learningCount = item.stats_learning ?? 0;
+  const reviewCount = item.stats_review ?? 0;
+  const masteredCount = item.stats_mastered ?? 0;
 
   return (
     <TouchableOpacity style={[styles.deckCard, { backgroundColor: colors.surface }]} onPress={() => onPress(item)}>
@@ -40,20 +44,20 @@ export function DeckCard({ item, onPress }: DeckCardProps) {
       <View style={styles.deckStats}>
         <View style={styles.statItem}>
           <Text style={[styles.statNumber, { color: "#34C759" }]}>
-            {flashcardCount}
+            {newCount}
           </Text>
           <Text style={styles.statLabel}>Nowe</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: "#FF9500" }]}>{0}</Text>
+          <Text style={[styles.statNumber, { color: "#FF9500" }]}>{learningCount}</Text>
           <Text style={styles.statLabel}>Uczę się</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: "#FF3B30" }]}>{0}</Text>
+          <Text style={[styles.statNumber, { color: "#FF3B30" }]}>{reviewCount}</Text>
           <Text style={styles.statLabel}>Powtórka</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: "#007AFF" }]}>{0}</Text>
+          <Text style={[styles.statNumber, { color: "#007AFF" }]}>{masteredCount}</Text>
           <Text style={styles.statLabel}>Opanowane</Text>
         </View>
       </View>

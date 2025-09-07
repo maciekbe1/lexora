@@ -47,7 +47,7 @@ export function BottomSheetMenu({
         {...panResponder.panHandlers}
       >
         {/* Top gesture zone to reliably catch downward drags on the header area */}
-        <TopGestureZone height={64} {...panResponder.panHandlers as any} />
+        <TopGestureZone height={96} pointerEvents="box-only" {...panResponder.panHandlers as any} />
         <View
           style={styles.handle}
           pointerEvents="box-only"

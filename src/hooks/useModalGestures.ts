@@ -7,6 +7,7 @@ interface UseModalGesturesProps {
   screenHeight: number;
   dismissWithAnimation: () => void;
   resetToBottom: () => void;
+  topStartHeight?: number; // px area from top where we immediately capture
 }
 
 export function useModalGestures({
@@ -15,6 +16,7 @@ export function useModalGestures({
   screenHeight,
   dismissWithAnimation,
   resetToBottom,
+  topStartHeight = 96,
 }: UseModalGesturesProps) {
   // Unified gesture thresholds across modals
   const DRAG_ACTIVATION_DY = 3; // start pan after very slight pull
@@ -25,8 +27,15 @@ export function useModalGestures({
 
   const panResponder = useRef(
     PanResponder.create({
-      // Improve capture so downward swipes over interactive children still work
-      onStartShouldSetPanResponder: () => false,
+      // Capture immediately if touch starts within the top capture zone
+      onStartShouldSetPanResponder: (evt) => {
+        const y = (evt?.nativeEvent as any)?.locationY ?? 0;
+        return y <= topStartHeight;
+      },
+      onStartShouldSetPanResponderCapture: (evt) => {
+        const y = (evt?.nativeEvent as any)?.locationY ?? 0;
+        return y <= topStartHeight;
+      },
       onMoveShouldSetPanResponder: (_: GestureResponderEvent, g) => {
         const vertical = Math.abs(g.dy) > Math.abs(g.dx);
         return vertical && g.dy > DRAG_ACTIVATION_DY;
