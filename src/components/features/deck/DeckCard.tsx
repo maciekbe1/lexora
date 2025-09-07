@@ -22,6 +22,7 @@ export function DeckCard({ item, onPress }: DeckCardProps) {
   const learningCount = item.stats_learning ?? 0;
   const reviewCount = item.stats_review ?? 0;
   const masteredCount = item.stats_mastered ?? 0;
+  const dueToday = item.due_today ?? 0;
 
   return (
     <TouchableOpacity style={[styles.deckCard, { backgroundColor: colors.surface }]} onPress={() => onPress(item)}>
@@ -31,6 +32,7 @@ export function DeckCard({ item, onPress }: DeckCardProps) {
         </View>
         <View style={styles.deckInfo}>
           <Text style={[styles.deckName, { color: colors.text }]}>{deckName}</Text>
+          <Text style={[styles.deckDue, { color: colors.mutedText }]}>Do nauki dziś: {dueToday}</Text>
           <Text style={[styles.deckDescription, { color: colors.mutedText }]}>{description}</Text>
           <Text style={[styles.deckCount, { color: colors.mutedText }]}>{flashcardCount} fiszek</Text>
         </View>
@@ -107,6 +109,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 4,
   },
+  deckDue: { fontSize: 12, marginBottom: 2 },
   deckCount: {
     fontSize: 12,
   },

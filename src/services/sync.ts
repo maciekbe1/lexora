@@ -258,6 +258,14 @@ export class SyncService {
 
         if (columnTest !== null) {
           // Basic custom deck support exists
+          // Try to detect stats_* columns support
+          const { data: statsTest, error: statsError } = await supabase
+            .from('user_decks')
+            .select('stats_new, stats_learning, stats_review, stats_mastered, stats_updated_at')
+            .limit(1);
+
+          const supportsStats = !statsError && statsTest !== null;
+
           decksToSync = userDecks.map(row => ({
             id: row.id,
             user_id: row.user_id,
@@ -266,6 +274,15 @@ export class SyncService {
             is_favorite: Boolean(row.is_favorite),
             is_custom: Boolean(row.is_custom),
             added_at: row.added_at,
+            ...(supportsStats
+              ? {
+                  stats_new: row.stats_new ?? 0,
+                  stats_learning: row.stats_learning ?? 0,
+                  stats_review: row.stats_review ?? 0,
+                  stats_mastered: row.stats_mastered ?? 0,
+                  stats_updated_at: row.stats_updated_at ?? new Date().toISOString(),
+                }
+              : {}),
           }));
         } else {
           // Fallback to minimal fields

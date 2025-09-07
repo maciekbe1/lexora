@@ -45,12 +45,17 @@ export function ModalHeader({
           headerRight
         ) : rightButton ? (
           <TouchableOpacity
-            onPress={rightButton.onPress}
+            onPress={() => {
+              console.log('Right button pressed!', rightButton.text);
+              rightButton.onPress();
+            }}
             style={[
               styles.rightButton,
               (rightButton.disabled || rightButton.loading) && styles.rightButtonDisabled,
             ]}
             disabled={rightButton.disabled || rightButton.loading}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            activeOpacity={0.7}
           >
             <Text style={styles.rightButtonText}>
               {rightButton.loading ? "Ładowanie..." : rightButton.text}
@@ -100,5 +105,6 @@ const styles = StyleSheet.create({
   headerRightContainer: {
     minWidth: 60,
     alignItems: "flex-end",
+    zIndex: 100,
   },
 });

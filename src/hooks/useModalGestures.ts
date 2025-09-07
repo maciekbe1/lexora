@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { MutableRefObject, useRef } from "react";
 import { Animated, GestureResponderEvent, PanResponder } from "react-native";
 
 interface UseModalGesturesProps {
@@ -8,6 +8,8 @@ interface UseModalGesturesProps {
   dismissWithAnimation: () => void;
   resetToBottom: () => void;
   topStartHeight?: number; // px area from top where we immediately capture
+  requireScrollTop?: boolean; // when true, only allow swipe when scroll is at top
+  scrollOffsetRef?: MutableRefObject<number>;
 }
 
 export function useModalGestures({
@@ -17,6 +19,8 @@ export function useModalGestures({
   dismissWithAnimation,
   resetToBottom,
   topStartHeight = 96,
+  requireScrollTop = false,
+  scrollOffsetRef,
 }: UseModalGesturesProps) {
   // Unified gesture thresholds across modals
   const DRAG_ACTIVATION_DY = 3; // start pan after very slight pull
@@ -29,19 +33,29 @@ export function useModalGestures({
     PanResponder.create({
       // Capture immediately if touch starts within the top capture zone
       onStartShouldSetPanResponder: (evt) => {
-        const y = (evt?.nativeEvent as any)?.locationY ?? 0;
-        return y <= topStartHeight;
+        const y = (evt?.nativeEvent as any)?.locationY ?? Number.MAX_SAFE_INTEGER;
+        return y <= topStartHeight; // header zone: capture immediately
       },
       onStartShouldSetPanResponderCapture: (evt) => {
-        const y = (evt?.nativeEvent as any)?.locationY ?? 0;
+        const y = (evt?.nativeEvent as any)?.locationY ?? Number.MAX_SAFE_INTEGER;
         return y <= topStartHeight;
       },
-      onMoveShouldSetPanResponder: (_: GestureResponderEvent, g) => {
+      onMoveShouldSetPanResponder: (evt: GestureResponderEvent, g) => {
+        const y = (evt?.nativeEvent as any)?.locationY ?? Number.MAX_SAFE_INTEGER;
+        const inHeaderZone = y <= topStartHeight;
         const vertical = Math.abs(g.dy) > Math.abs(g.dx);
+        // Allow swipe if in header zone regardless of scroll position
+        if (inHeaderZone) return vertical && g.dy > DRAG_ACTIVATION_DY;
+        // Otherwise require scroll at top if configured
+        if (requireScrollTop && scrollOffsetRef && (scrollOffsetRef.current || 0) > 1) return false;
         return vertical && g.dy > DRAG_ACTIVATION_DY;
       },
-      onMoveShouldSetPanResponderCapture: (_: GestureResponderEvent, g) => {
+      onMoveShouldSetPanResponderCapture: (evt: GestureResponderEvent, g) => {
+        const y = (evt?.nativeEvent as any)?.locationY ?? Number.MAX_SAFE_INTEGER;
+        const inHeaderZone = y <= topStartHeight;
         const vertical = Math.abs(g.dy) > Math.abs(g.dx);
+        if (inHeaderZone) return vertical && g.dy > DRAG_ACTIVATION_DY;
+        if (requireScrollTop && scrollOffsetRef && (scrollOffsetRef.current || 0) > 1) return false;
         return vertical && g.dy > DRAG_ACTIVATION_DY;
       },
       onPanResponderTerminationRequest: () => false,

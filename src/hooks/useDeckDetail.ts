@@ -14,6 +14,7 @@ export function useDeckDetail() {
   const [showEditDeckModal, setShowEditDeckModal] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [editingFlashcard, setEditingFlashcard] = useState<CustomFlashcard | null>(null);
+  const [dueToday, setDueToday] = useState<number>(0);
 
   // Use the flashcard management hook
   const {
@@ -94,6 +95,15 @@ export function useDeckDetail() {
     useCallback(() => {
       // Silent reload to avoid showing RefreshControl animation that shifts content
       reloadDeck();
+      // Also refresh due count
+      (async () => {
+        try {
+          if (id) {
+            const count = await (await import('@/services/local-database')).localDatabase.getDeckDueCount(id);
+            setDueToday(count);
+          }
+        } catch {}
+      })();
     }, [])
   );
 
@@ -111,6 +121,7 @@ export function useDeckDetail() {
     flashcards,
     deckName,
     deckDescription,
+    dueToday,
 
     // States
     refreshing,

@@ -3,7 +3,7 @@ import { TopGestureZone } from "@/components/ui/TopGestureZone";
 import { ModalHeader } from "@/components/ui/ModalHeader";
 import { useBaseModal } from "@/hooks/useBaseModal";
 import { ThemedSurface } from "@/theme/ThemedSurface";
-import { ReactNode } from "react";
+import React, { ReactNode, useRef } from "react";
 import {
   Animated,
   KeyboardAvoidingView,
@@ -30,6 +30,8 @@ interface BaseModalProps {
   height?: "80%" | "90%"; // Default height options
   disableScroll?: boolean; // When true, renders children without internal ScrollView
   showCancel?: boolean; // When false, hides the left cancel button
+  requireScrollTopForSwipe?: boolean; // When true, allow swipe-to-close only if scroll is at top
+  disableTopGestureZone?: boolean; // When true, disables the top gesture zone completely
 }
 
 export function BaseModal({
@@ -42,11 +44,16 @@ export function BaseModal({
   height = "90%",
   disableScroll = false,
   showCancel = false,
+  requireScrollTopForSwipe = false,
+  disableTopGestureZone = false,
 }: BaseModalProps) {
+  const scrollOffsetRef = useRef(0);
   const { translateY, backdropOpacity, panResponder, dismissWithAnimation } =
     useBaseModal({
       visible,
       onClose,
+      requireScrollTopForSwipe,
+      scrollOffsetRef,
     });
 
   return (
@@ -81,8 +88,6 @@ export function BaseModal({
             transform: [{ translateY }],
           },
         ]}
-        // Allow swipe-to-close from anywhere on the modal sheet
-        {...(panResponder.panHandlers as any)}
       >
         <ThemedSurface
           style={[styles.modalContent]}
@@ -90,10 +95,19 @@ export function BaseModal({
           withShadow={true}
         >
           {/* Global top gesture zone to reliably catch downward drags */}
-          <TopGestureZone height={96} pointerEvents="box-only" {...(panResponder.panHandlers as any)} />
+          {!disableTopGestureZone && (
+            <TopGestureZone
+              height={96}
+              excludeLeftWidth={60}
+              excludeRightWidth={160}
+              {...(panResponder.panHandlers as any)}
+            />
+          )}
           {/* Drag area with gestures */}
-          <View style={styles.dragArea} {...panResponder.panHandlers}>
-            <DragHandle onPress={dismissWithAnimation} />
+          <View style={styles.dragArea} pointerEvents="box-none">
+            <View {...panResponder.panHandlers}>
+              <DragHandle onPress={dismissWithAnimation} />
+            </View>
             <ModalHeader
               title={title}
               onClose={dismissWithAnimation}
@@ -119,6 +133,10 @@ export function BaseModal({
                 keyboardShouldPersistTaps="handled"
                 scrollEnabled={true}
                 bounces={true}
+                onScroll={(e) => {
+                  scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
+                }}
+                scrollEventThrottle={16}
               >
                 {children}
               </ScrollView>

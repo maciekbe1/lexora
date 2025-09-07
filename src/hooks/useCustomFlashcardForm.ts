@@ -76,9 +76,9 @@ export function useCustomFlashcardForm({
     // Intentionally ignore deps to run only on visibility change
   }, [visible]);
 
-  // Debounced auto-translation (PL -> deck language or override) when creating
+  // Debounced auto-translation (PL -> deck language or override)
   useEffect(() => {
-    if (!visible || editingFlashcard) return;
+    if (!visible) return;
     const deck = customDecks.find((d) => d.id === selectedDeck);
     const targetLang = normalizeLangCode(targetLangOverride || deck?.deck_language);
 
@@ -90,6 +90,7 @@ export function useCustomFlashcardForm({
         const translated = await translateText(frontText.trim(), 'pl', targetLang);
         const prevAuto = lastAutoTranslationRef.current;
         lastAutoTranslationRef.current = translated;
+        // In editing mode, still allow auto-translate if user hasn't edited back manually or it's equal to previous auto value
         const shouldWrite = !backEditedManuallyRef.current || !backText.trim() || backText === prevAuto;
         if (shouldWrite) {
           setBackText(translated);
@@ -100,7 +101,7 @@ export function useCustomFlashcardForm({
     }, 500);
 
     return () => clearTimeout(t);
-  }, [frontText, selectedDeck, targetLangOverride, visible]);
+  }, [frontText, selectedDeck, targetLangOverride, visible, editingFlashcard]);
 
   // Fallback: if deck_language missing on the selected deck, try to read from custom_decks
   useEffect(() => {

@@ -43,8 +43,6 @@ export function BottomSheetMenu({
             maxHeight: `${Math.round(maxHeightPercent * 100)}%`,
           },
         ]}
-        // Allow swipe-to-close from anywhere on the sheet
-        {...panResponder.panHandlers}
       >
         {/* Top gesture zone to reliably catch downward drags on the header area */}
         <TopGestureZone height={96} pointerEvents="box-only" {...panResponder.panHandlers as any} />
@@ -64,7 +62,7 @@ export function BottomSheetMenu({
           </TouchableOpacity>
         </View>
 
-        <View style={styles.content} {...panResponder.panHandlers}>
+        <View style={styles.content} pointerEvents="box-none">
           {rendered}
         </View>
       </Animated.View>

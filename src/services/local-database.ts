@@ -426,14 +426,14 @@ export class LocalDatabase {
     }
   }
 
-  /** Build study queue: due reviews -> learning -> new */
+  /** Build study queue: due reviews -> learning -> new -> mastered (so user can still see mastered cards) */
   async getStudyQueue(deckId: string) {
     const db = await this.getDb();
     await this.ensureProgressTable(db);
     const nowIso = new Date().toISOString();
     // Due review cards
     const dueReviews = await db.getAllAsync<any>(
-      `SELECT f.* FROM custom_flashcards f
+      `SELECT f.*, p.status AS progress_status FROM custom_flashcards f
          JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
         WHERE f.user_deck_id = ? AND p.status = 'review' AND (p.next_review_at IS NULL OR p.next_review_at <= ?)
         ORDER BY COALESCE(p.next_review_at, '') ASC, f.position ASC
@@ -443,7 +443,7 @@ export class LocalDatabase {
 
     // Learning cards (always due)
     const learning = await db.getAllAsync<any>(
-      `SELECT f.* FROM custom_flashcards f
+      `SELECT f.*, p.status AS progress_status FROM custom_flashcards f
          JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
         WHERE f.user_deck_id = ? AND p.status = 'learning'
         ORDER BY COALESCE(p.last_reviewed_at, '') ASC, f.position ASC
@@ -453,7 +453,7 @@ export class LocalDatabase {
 
     // New cards: not present in progress table or marked 'new'
     const news = await db.getAllAsync<any>(
-      `SELECT f.* FROM custom_flashcards f
+      `SELECT f.*, COALESCE(p.status, 'new') AS progress_status FROM custom_flashcards f
         LEFT JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
         WHERE f.user_deck_id = ? AND (p.flashcard_id IS NULL OR p.status = 'new')
         ORDER BY f.position ASC
@@ -461,7 +461,38 @@ export class LocalDatabase {
       [deckId]
     );
 
-    return [...dueReviews, ...learning, ...news];
+    // Mastered cards at the end (still visible in study per product decision)
+    const mastered = await db.getAllAsync<any>(
+      `SELECT f.*, p.status AS progress_status FROM custom_flashcards f
+         JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+        WHERE f.user_deck_id = ? AND p.status = 'mastered'
+        ORDER BY COALESCE(p.last_reviewed_at, '') DESC, f.position ASC
+      `,
+      [deckId]
+    );
+
+    return [...dueReviews, ...learning, ...news, ...mastered];
+  }
+
+  /** Count due today (reviews with next_review_at <= now) + learning */
+  async getDeckDueCount(deckId: string): Promise<number> {
+    const db = await this.getDb();
+    await this.ensureProgressTable(db);
+    const nowIso = new Date().toISOString();
+    const reviewRow = await db.getFirstAsync<any>(
+      `SELECT COUNT(*) AS c FROM custom_flashcards f
+         JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+        WHERE f.user_deck_id = ? AND p.status = 'review' AND (p.next_review_at IS NULL OR p.next_review_at <= ?)`,
+      [deckId, nowIso]
+    );
+    const learningRow = await db.getFirstAsync<any>(
+      `SELECT COUNT(*) AS c FROM custom_flashcards f
+         JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+        WHERE f.user_deck_id = ? AND p.status = 'learning'`,
+      [deckId]
+    );
+    const due = Number(reviewRow?.c || 0) + Number(learningRow?.c || 0);
+    return due;
   }
 
   /** Apply answer, update per-card progress and aggregate deck stats */

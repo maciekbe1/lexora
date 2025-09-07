@@ -1,6 +1,6 @@
 import type { CustomFlashcard, UserDeck } from "@/types/flashcard";
 import React from "react";
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, StyleSheet, Text, TextInput, View, TouchableOpacity } from "react-native";
 import { useAppTheme } from "@/theme/useAppTheme";
 
 import { DeckSelector } from "@/components/features/deck";
@@ -59,6 +59,7 @@ export function CustomFlashcardModal({
     setTargetLangOverride,
     markBackEdited,
     handleCreate,
+    translateNow,
   } = useCustomFlashcardForm(params);
 
   const [showLangPicker, setShowLangPicker] = React.useState(false);
@@ -68,13 +69,15 @@ export function CustomFlashcardModal({
       visible={visible}
       onClose={onClose}
       title={editingFlashcard ? "Edytuj fiszkę" : "Nowa fiszka"}
+      requireScrollTopForSwipe
+      disableTopGestureZone
       rightButton={{
         text: editingFlashcard ? "Zapisz" : "Stwórz",
         onPress: async () => {
           const ok = await handleCreate();
           if (ok) onClose();
         },
-        disabled: isLoading || customDecks.length === 0,
+        disabled: isLoading || !selectedDeck,
         loading: isLoading,
       }}
     >
@@ -128,32 +131,37 @@ export function CustomFlashcardModal({
                     {`${getLanguageFlag(targetLang || "")} ${(targetLang || "??").toUpperCase()}`}
                   </Text>
                 </View>
-                <Text
-                  accessibilityRole="button"
-                  style={styles.changeLangButton}
-                  onPress={() => setShowLangPicker((v) => !v)}
-                >
-                  Zmień
-                </Text>
+                <TouchableOpacity onPress={() => setShowLangPicker((v) => !v)}>
+                  <Text style={styles.changeLangButton}>
+                    Zmień
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => translateNow({ force: true })}>
+                  <Text style={styles.changeLangButton}>
+                    Tłumacz
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
             {showLangPicker && (
               <View style={styles.langPicker}>
                 {SUPPORTED_LANGUAGES.map((lang) => (
-                  <Text
+                  <TouchableOpacity
                     key={lang.code}
-                    accessibilityRole="button"
-                    style={[
-                      styles.langOption,
-                      lang.code === targetLang && styles.langOptionActive,
-                    ]}
                     onPress={() => {
                       setTargetLangOverride(lang.code);
                       setShowLangPicker(false);
                     }}
                   >
-                    {`${lang.flag} ${lang.name}`}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.langOption,
+                        lang.code === targetLang && styles.langOptionActive,
+                      ]}
+                    >
+                      {`${lang.flag} ${lang.name}`}
+                    </Text>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
@@ -195,9 +203,7 @@ export function CustomFlashcardModal({
           {editingFlashcard && onDeleteFlashcard ? (
             <View style={styles.formGroup}>
               <Text style={styles.label}>Akcje</Text>
-              <Text
-                accessibilityRole="button"
-                style={styles.deleteButton}
+              <TouchableOpacity
                 onPress={() => {
                   Alert.alert(
                     "Usuń fiszkę",
@@ -216,8 +222,10 @@ export function CustomFlashcardModal({
                   );
                 }}
               >
-                Usuń fiszkę
-              </Text>
+                <Text style={styles.deleteButton}>
+                  Usuń fiszkę
+                </Text>
+              </TouchableOpacity>
             </View>
           ) : null}
         </>

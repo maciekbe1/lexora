@@ -1,7 +1,7 @@
 import { useAppTheme } from "@/theme/useAppTheme";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
 import { BottomSheetMenu } from "./BottomSheetMenu";
 import { CancelFooterButton } from "./CancelFooterButton";
 
@@ -42,12 +42,14 @@ export function OptionsMenu({ visible, onClose, title, options, maxHeightPercent
           const iconColor =
             opt.iconColor || (isDestructive ? "#FF3B30" : colors.primary);
           return (
-            <View
+            <TouchableOpacity
               key={idx}
               style={[
                 styles.item,
                 { borderColor: colors.border, backgroundColor: bg },
               ]}
+              onPress={() => { dismiss(); setTimeout(() => opt.onPress(), 260); }}
+              activeOpacity={0.7}
             >
               <Ionicons
                 name={opt.icon as any}
@@ -68,8 +70,7 @@ export function OptionsMenu({ visible, onClose, title, options, maxHeightPercent
                   </Text>
                 ) : null}
               </View>
-              <Text style={styles.touch} onPress={() => { dismiss(); setTimeout(() => opt.onPress(), 260); }} />
-            </View>
+            </TouchableOpacity>
           );
         })}
         <View style={styles.bottom}><CancelFooterButton onPress={dismiss} /></View>
@@ -100,6 +101,5 @@ const styles = StyleSheet.create({
   textWrap: { flex: 1 },
   itemTitle: { fontSize: 16, fontWeight: "600", marginBottom: 2 },
   itemSubtitle: { fontSize: 14 },
-  touch: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   bottom: { paddingTop: 0 },
 });

@@ -102,9 +102,23 @@ export function useDeckManagement(user: User | null) {
     try {
       const localDecks = await localDatabase.getUserDecks(user.id);
 
-      if (localDecks.length > 0) {
+      const withDue = await (async () => {
+        const result = await Promise.all(
+          localDecks.map(async (d) => {
+            try {
+              const due = await localDatabase.getDeckDueCount(d.id);
+              return { ...d, due_today: due } as UserDeck;
+            } catch {
+              return { ...d } as UserDeck;
+            }
+          })
+        );
+        return result;
+      })();
+
+      if (withDue.length > 0) {
         console.log(`Loaded ${localDecks.length} decks from local database`);
-        setUserDecks(localDecks);
+        setUserDecks(withDue);
 
         syncService
           .autoSync(user.id)
@@ -148,7 +162,18 @@ export function useDeckManagement(user: User | null) {
           // Tombstone filtering errors are non-fatal because they only affect local filtering; continue loading decks.
           console.log('Tombstone filtering error:', err);
         }
-        setUserDecks(filtered);
+        // Attach due_today counts
+        const withDueRemote = await Promise.all(
+          (filtered || []).map(async (d: any) => {
+            try {
+              const due = await localDatabase.getDeckDueCount(d.id);
+              return { ...d, due_today: due } as UserDeck;
+            } catch {
+              return d as UserDeck;
+            }
+          })
+        );
+        setUserDecks(withDueRemote);
 
         if (filtered) {
           for (const deck of filtered) {

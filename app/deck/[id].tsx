@@ -36,6 +36,7 @@ export default function DeckDetailScreen() {
     showEditDeckModal,
     showOptionsMenu,
     editingFlashcard,
+    dueToday,
     onRefresh,
     handleEditFlashcard,
     handleAddFlashcard,
@@ -118,6 +119,13 @@ export default function DeckDetailScreen() {
         deckDescription={deckDescription}
         deckLanguage={deck.deck_language}
         flashcardCount={flashcards.length}
+        dueToday={dueToday}
+        stats={{
+          new: deck.stats_new ?? 0,
+          learning: deck.stats_learning ?? 0,
+          review: deck.stats_review ?? 0,
+          mastered: deck.stats_mastered ?? 0,
+        }}
         onStartStudy={handleStartStudy}
       />
 

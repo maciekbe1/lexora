@@ -27,6 +27,7 @@ export default function StudyScreen() {
   }, [deckId]);
 
   const card = cards[index];
+  const isMastered = card?.progress_status === 'mastered';
 
   const onBack = () => router.back();
 
@@ -128,6 +129,12 @@ export default function StudyScreen() {
       {/* Card */}
       <View style={styles.cardWrap}>
         <ThemedSurface style={styles.card}>
+          {isMastered && (
+            <View style={[styles.badge, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+              <Ionicons name="checkmark-circle" size={14} color="#34C759" />
+              <Text style={[styles.badgeText, { color: colors.mutedText }]}>Opanowana</Text>
+            </View>
+          )}
           {(() => {
             const uri = !showAnswer
               ? card.front_image_url
@@ -206,6 +213,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  badge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  badgeText: { fontSize: 12, fontWeight: '600' },
   cardImage: {
     width: "100%",
     height: 180,

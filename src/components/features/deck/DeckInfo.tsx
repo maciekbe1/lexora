@@ -8,6 +8,8 @@ interface DeckInfoProps {
   deckLanguage?: string | undefined;
   flashcardCount: number;
   onStartStudy: () => void;
+  dueToday?: number;
+  stats?: { new: number; learning: number; review: number; mastered: number };
 }
 
 export function DeckInfo({
@@ -15,6 +17,8 @@ export function DeckInfo({
   deckLanguage,
   flashcardCount,
   onStartStudy,
+  dueToday,
+  stats,
 }: DeckInfoProps) {
   const { colors } = useAppTheme();
   return (
@@ -29,6 +33,26 @@ export function DeckInfo({
             Język: {deckLanguage}
           </Text>
         )}
+        {stats && (
+          <View style={[styles.statsRow, { borderTopColor: colors.border }]}>
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, { color: "#34C759" }]}>{stats.new}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedText }]}>Nowe</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, { color: "#FF9500" }]}>{stats.learning}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedText }]}>Uczę się</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, { color: "#FF3B30" }]}>{stats.review}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedText }]}>Powtórka</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, { color: "#007AFF" }]}>{stats.mastered}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedText }]}>Opanowane</Text>
+            </View>
+          </View>
+        )}
       </View>
 
       {/* Study Button */}
@@ -38,7 +62,7 @@ export function DeckInfo({
       >
         <Ionicons name="play" size={20} color="#fff" />
         <Text style={styles.studyButtonText}>
-          Rozpocznij naukę {flashcardCount > 0 && `(${flashcardCount})`}
+          Rozpocznij naukę {typeof dueToday === 'number' ? `(${dueToday})` : flashcardCount > 0 ? `(${flashcardCount})` : ''}
         </Text>
       </TouchableOpacity>
     </>
@@ -58,6 +82,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
   },
+  statsRow: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: { alignItems: 'center' },
+  statNumber: { fontSize: 16, fontWeight: '700' },
+  statLabel: { fontSize: 11, marginTop: 2 },
   studyButton: {
     flexDirection: "row",
     alignItems: "center",

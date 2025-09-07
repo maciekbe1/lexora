@@ -46,6 +46,7 @@ export interface UserDeck {
   stats_learning?: number;
   stats_review?: number;
   stats_mastered?: number;
+  due_today?: number; // computed locally for dashboard
 
 }
 
