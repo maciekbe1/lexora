@@ -86,6 +86,7 @@ export class SyncService {
       if (userDecks) {
         for (const deck of userDecks) {
           if (deckTombstones.has(deck.id)) continue;
+          console.log(`🔄 SYNC: Inserting user deck ${deck.id} with stats: new=${deck.stats_new}, learning=${deck.stats_learning}, mastered=${deck.stats_mastered}`);
           await localDatabase.insertUserDeck(deck);
         }
       }
@@ -413,6 +414,9 @@ export class SyncService {
         return;
       }
 
+      // Clean up orphaned progress data first
+      await localDatabase.cleanupOrphanedProgress();
+      
       // Get all progress data from local database
       const progressData = await localDatabase.getAllProgressData();
       
@@ -429,10 +433,12 @@ export class SyncService {
       const remoteFlashcardIds = new Set(remoteFlashcards?.map(f => f.id) || []);
 
       // Filter progress data to only include records for flashcards that exist in remote
+      console.log(`Found ${progressData.length} local progress records and ${remoteFlashcardIds.size} remote flashcards`);
+      
       const validProgressData = progressData.filter(progress => {
         const isValid = remoteFlashcardIds.has(progress.flashcard_id);
         if (!isValid) {
-          console.log(`Skipping progress for non-existent flashcard: ${progress.flashcard_id}`);
+          console.log(`Skipping progress for non-existent flashcard: ${progress.flashcard_id} (deck: ${progress.user_deck_id})`);
         }
         return isValid;
       });

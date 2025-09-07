@@ -29,14 +29,35 @@ export default function StudyScreen() {
   const card = cards[index];
   const isMastered = card?.progress_status === 'mastered';
 
-  const onBack = () => router.back();
+  const onBack = async () => {
+    // Recalculate stats when user leaves study session early
+    try {
+      if (deckId) {
+        console.log('🔙 USER LEFT EARLY - Recalculating deck stats for:', deckId);
+        await localDatabase.recalculateDeckStats(deckId);
+        console.log('✅ Deck statistics recalculated after leaving study session');
+      }
+    } catch (e) {
+      console.log('❌ Failed to recalculate deck stats on back:', e);
+    }
+    router.back();
+  };
 
   const onShowAnswer = () => setShowAnswer(true);
 
-  const nextCard = () => {
+  const nextCard = async () => {
     const next = index + 1;
     if (next >= cards.length) {
-      // Session finished: return to previous deck screen to avoid duplicate stack entries
+      // Session finished: recalculate deck statistics and return to previous deck screen
+      try {
+        if (deckId) {
+          console.log('🔄 STUDY SESSION FINISHED - Recalculating deck stats for:', deckId);
+          await localDatabase.recalculateDeckStats(deckId);
+          console.log('✅ Deck statistics recalculated after study session');
+        }
+      } catch (e) {
+        console.log('❌ Failed to recalculate deck stats:', e);
+      }
       router.back();
     } else {
       setIndex(next);
@@ -51,7 +72,7 @@ export default function StudyScreen() {
     } catch (e) {
       console.log("applyAnswer failed (didnt know):", e);
     } finally {
-      nextCard();
+      await nextCard();
     }
   };
 
@@ -62,7 +83,7 @@ export default function StudyScreen() {
     } catch (e) {
       console.log("applyAnswer failed (knew):", e);
     } finally {
-      nextCard();
+      await nextCard();
     }
   };
 

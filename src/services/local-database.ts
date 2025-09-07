@@ -102,6 +102,9 @@ export class LocalDatabase {
 
       // Migrate user_decks table to unified model
       await this.migrateToUnifiedModel(db);
+      
+      // Fix custom deck names
+      await this.fixCustomDeckNames();
 
       // Ensure study stats columns exist (handles already-migrated DBs)
       await this.ensureStatsColumns(db);
@@ -132,14 +135,14 @@ export class LocalDatabase {
 
       if (alters.length > 0) {
         await db.execAsync(alters.join(';') + ';');
-        // Initialize defaults based on counts if newly added
+        // Initialize defaults ONLY for newly added columns (not existing data)
         await db.execAsync(`
           UPDATE user_decks
-          SET stats_new = COALESCE(stats_new, 0) + COALESCE(deck_flashcard_count, 0),
-              stats_learning = COALESCE(stats_learning, 0),
-              stats_review = COALESCE(stats_review, 0),
-              stats_mastered = COALESCE(stats_mastered, 0),
-              stats_updated_at = datetime('now')
+          SET stats_new = CASE WHEN stats_new IS NULL THEN COALESCE(deck_flashcard_count, 0) ELSE stats_new END,
+              stats_learning = CASE WHEN stats_learning IS NULL THEN 0 ELSE stats_learning END,
+              stats_review = CASE WHEN stats_review IS NULL THEN 0 ELSE stats_review END,
+              stats_mastered = CASE WHEN stats_mastered IS NULL THEN 0 ELSE stats_mastered END,
+              stats_updated_at = CASE WHEN stats_updated_at IS NULL THEN datetime('now') ELSE stats_updated_at END
           WHERE stats_new IS NULL OR stats_learning IS NULL OR stats_review IS NULL OR stats_mastered IS NULL;
         `);
       }
@@ -233,16 +236,26 @@ export class LocalDatabase {
       // Additional fix for existing custom decks that may have missing deck_name
       await this.fixExistingCustomDecks(db);
 
-      // Initialize study stats based on flashcard counts
-      await db.execAsync(`
+      // Debug: show all deck stats before initialization
+      const allDecks = await db.getAllAsync('SELECT id, deck_name, stats_new, stats_learning, stats_mastered, stats_updated_at FROM user_decks');
+      console.log('🚀 APP STARTUP - All deck stats before init:', allDecks);
+
+      // Initialize study stats based on flashcard counts ONLY for newly added decks
+      const initResult = await db.runAsync(`
         UPDATE user_decks
-        SET stats_new = COALESCE(stats_new, 0) + COALESCE(deck_flashcard_count, 0),
-            stats_learning = COALESCE(stats_learning, 0),
-            stats_review = COALESCE(stats_review, 0),
-            stats_mastered = COALESCE(stats_mastered, 0),
+        SET stats_new = COALESCE(deck_flashcard_count, 0),
+            stats_learning = 0,
+            stats_review = 0,
+            stats_mastered = 0,
             stats_updated_at = datetime('now')
-        WHERE stats_new IS NULL OR stats_new = 0;
+        WHERE stats_new IS NULL AND stats_updated_at IS NULL;
       `);
+      
+      console.log(`🔧 Initialized stats for ${initResult.changes} new decks`);
+      
+      // Debug: show all deck stats after initialization  
+      const allDecksAfter = await db.getAllAsync('SELECT id, deck_name, stats_new, stats_learning, stats_mastered, stats_updated_at FROM user_decks');
+      console.log('✅ APP STARTUP - All deck stats after init:', allDecksAfter);
     } catch (error) {
       console.error('Error migrating to unified model:', error);
       throw error;
@@ -308,12 +321,42 @@ export class LocalDatabase {
       
       
       await db.runAsync(
-        `INSERT OR REPLACE INTO user_decks 
+        `INSERT INTO user_decks 
          (id, user_id, template_deck_id, custom_name, is_favorite, is_custom, added_at, is_dirty,
           deck_name, deck_description, deck_language, deck_cover_image_url, deck_tags,
           deck_difficulty_level, deck_flashcard_count, deck_created_by, deck_is_active,
           deck_created_at, deck_updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           user_id = excluded.user_id,
+           template_deck_id = excluded.template_deck_id,
+           custom_name = excluded.custom_name,
+           is_favorite = excluded.is_favorite,
+           is_custom = excluded.is_custom,
+           added_at = excluded.added_at,
+           -- Preserve local deck_name if it's valid, otherwise use remote
+           deck_name = CASE 
+             WHEN user_decks.deck_name IS NOT NULL AND user_decks.deck_name != '' AND user_decks.deck_name != 'null' 
+             THEN user_decks.deck_name 
+             ELSE excluded.deck_name 
+           END,
+           deck_description = excluded.deck_description,
+           deck_language = excluded.deck_language,
+           deck_cover_image_url = excluded.deck_cover_image_url,
+           deck_tags = excluded.deck_tags,
+           deck_difficulty_level = excluded.deck_difficulty_level,
+           deck_flashcard_count = excluded.deck_flashcard_count,
+           deck_created_by = excluded.deck_created_by,
+           deck_is_active = excluded.deck_is_active,
+           deck_created_at = excluded.deck_created_at,
+           deck_updated_at = excluded.deck_updated_at,
+           -- Preserve existing statistics if they exist (don't reset to 0)
+           stats_new = COALESCE(user_decks.stats_new, excluded.stats_new, 0),
+           stats_learning = COALESCE(user_decks.stats_learning, excluded.stats_learning, 0),
+           stats_review = COALESCE(user_decks.stats_review, excluded.stats_review, 0),
+           stats_mastered = COALESCE(user_decks.stats_mastered, excluded.stats_mastered, 0),
+           stats_updated_at = COALESCE(user_decks.stats_updated_at, excluded.stats_updated_at)
+        `,
         [
           deck.id,
           deck.user_id,
@@ -686,40 +729,133 @@ export class LocalDatabase {
     }
   }
 
+  /** Clean up orphaned progress data (progress without corresponding flashcards) */
+  async cleanupOrphanedProgress(): Promise<void> {
+    const db = await this.getDb();
+    await this.ensureProgressTable(db);
+    
+    const result = await db.runAsync(
+      `DELETE FROM custom_flashcard_progress 
+       WHERE flashcard_id NOT IN (
+         SELECT id FROM custom_flashcards
+       )`
+    );
+    
+    console.log(`Cleaned up ${result.changes} orphaned progress records`);
+  }
+
+  /** Debug statistics before and after operations */
+  async debugDeckStats(deckId: string, operation: string): Promise<void> {
+    try {
+      const db = await this.getDb();
+      const deck = await db.getFirstAsync<any>(
+        'SELECT id, deck_name, stats_new, stats_learning, stats_review, stats_mastered, stats_updated_at FROM user_decks WHERE id = ?',
+        [deckId]
+      );
+      console.log(`📊 STATS ${operation}:`, {
+        deck: deck?.deck_name || 'Unknown',
+        new: deck?.stats_new,
+        learning: deck?.stats_learning, 
+        review: deck?.stats_review,
+        mastered: deck?.stats_mastered,
+        updated: deck?.stats_updated_at
+      });
+    } catch (e) {
+      console.log('Failed to debug stats:', e);
+    }
+  }
+
+  /** Fix deck names for custom decks (repair utility) */
+  async fixCustomDeckNames(): Promise<void> {
+    const db = await this.getDb();
+    
+    console.log('🔧 FIXING DECK NAMES - Starting...');
+    
+    // Debug: show problem decks before fix
+    const problemDecks = await db.getAllAsync(`
+      SELECT id, deck_name, custom_name, is_custom 
+      FROM user_decks 
+      WHERE is_custom = 1 AND (deck_name IS NULL OR deck_name = 'null' OR deck_name = '')
+    `);
+    console.log('🚨 Problem decks before fix:', problemDecks);
+    
+    // Fix deck_name from custom_name for custom decks
+    const result1 = await db.runAsync(`
+      UPDATE user_decks 
+      SET deck_name = custom_name
+      WHERE is_custom = 1 
+        AND custom_name IS NOT NULL 
+        AND custom_name != ''
+        AND (deck_name IS NULL OR deck_name = 'null' OR deck_name = '')
+    `);
+    
+    // Fix deck_name from custom_decks table
+    const result2 = await db.runAsync(`
+      UPDATE user_decks 
+      SET deck_name = (
+        SELECT cd.name FROM custom_decks cd 
+        WHERE cd.id = user_decks.id
+      )
+      WHERE is_custom = 1 
+        AND (deck_name IS NULL OR deck_name = 'null' OR deck_name = '')
+        AND EXISTS (
+          SELECT 1 FROM custom_decks cd 
+          WHERE cd.id = user_decks.id AND cd.name IS NOT NULL
+        )
+    `);
+    
+    console.log(`✅ Fixed ${result1.changes + result2.changes} custom deck names`);
+    
+    // Debug: show decks after fix
+    const decksAfterFix = await db.getAllAsync(`
+      SELECT id, deck_name, custom_name, is_custom 
+      FROM user_decks 
+      WHERE is_custom = 1
+    `);
+    console.log('✅ All custom decks after fix:', decksAfterFix);
+  }
+
   /** Recalculate deck stats from progress table (repair utility) */
   async recalculateDeckStats(userDeckId: string): Promise<void> {
     const db = await this.getDb();
     await this.ensureProgressTable(db);
-    // Count each bucket
+    const nowIso = new Date().toISOString();
+    
+    // Debug: show stats BEFORE recalculation
+    await this.debugDeckStats(userDeckId, 'BEFORE RECALC');
+    
+    // Count each bucket according to learning flow:
+    // 1. Nowe: karty bez progressu lub ze statusem 'new'
     const newRow = await db.getFirstAsync<any>(
       `SELECT COUNT(*) AS c FROM custom_flashcards f
         LEFT JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
        WHERE f.user_deck_id = ? AND (p.flashcard_id IS NULL OR p.status = 'new')`,
       [userDeckId]
     );
+    
+    // 2. Uczę się: karty ze statusem 'learning'
     const learningRow = await db.getFirstAsync<any>(
       `SELECT COUNT(*) AS c FROM custom_flashcards f
          JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
         WHERE f.user_deck_id = ? AND p.status = 'learning'`,
       [userDeckId]
     );
-    const reviewRow = await db.getFirstAsync<any>(
-      `SELECT COUNT(*) AS c FROM custom_flashcards f
-         JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
-        WHERE f.user_deck_id = ? AND p.status = 'review'`,
-      [userDeckId]
-    );
+    
+    // Simplify: remove review stats for now - just show new, learning, mastered
+    const nextNew = Number(newRow?.c || 0);
+    const nextLearning = Number(learningRow?.c || 0);
+    const nextReview = 0; // Always 0 for now
+    
+    // 3. Opanowane: wszystkie inne karty (mastered + review)
     const masteredRow = await db.getFirstAsync<any>(
       `SELECT COUNT(*) AS c FROM custom_flashcards f
          JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
-        WHERE f.user_deck_id = ? AND p.status = 'mastered'`,
+        WHERE f.user_deck_id = ? AND p.status IN ('mastered', 'review')`,
       [userDeckId]
     );
-
-    const nextNew = Number(newRow?.c || 0);
-    const nextLearning = Number(learningRow?.c || 0);
-    const nextReview = Number(reviewRow?.c || 0);
     const nextMastered = Number(masteredRow?.c || 0);
+
+    console.log(`🔄 Recalculating deck ${userDeckId}: new=${nextNew}, learning=${nextLearning}, mastered=${nextMastered}`);
 
     await db.runAsync(
       `UPDATE user_decks
@@ -727,6 +863,9 @@ export class LocalDatabase {
        WHERE id = ?`,
       [nextNew, nextLearning, nextReview, nextMastered, userDeckId]
     );
+    
+    // Debug: show stats AFTER recalculation  
+    await this.debugDeckStats(userDeckId, 'AFTER RECALC');
   }
 
   /** Ensure progress table exists (safe to call repeatedly) */
