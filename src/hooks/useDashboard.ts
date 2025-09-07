@@ -1,5 +1,5 @@
 import { useDeckManagement } from "@/hooks/useDeckManagement";
-import { useAppStore, useAuthStore, useDeckDetailStore } from "@/store";
+import { useAppStore, useAuthStore } from "@/store";
 import type { UserDeck } from "@/types/flashcard";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -8,7 +8,6 @@ import { AppState } from "react-native";
 export function useDashboard() {
   const { user } = useAuthStore();
   const { initializedForUserId, initializing } = useAppStore();
-  const { loadDeckData } = useDeckDetailStore();
   const isInitialized = Boolean(user) && initializedForUserId === user!.id && !initializing;
   const {
     userDecks,
@@ -66,19 +65,8 @@ export function useDashboard() {
   }, [isInitialized, lastFetchTime, fetchUserDecks]);
 
   // Navigation handlers
-  const handleDeckPress = async (userDeck: UserDeck) => {
-    // Preload deck data before navigation to reduce flash
-    if (user?.id) {
-      loadDeckData(user.id, userDeck.id).then(() => {
-        // Navigate after data is loaded
-        router.push(`/deck/${userDeck.id}`);
-      }).catch(() => {
-        // Navigate anyway if preload fails
-        router.push(`/deck/${userDeck.id}`);
-      });
-    } else {
-      router.push(`/deck/${userDeck.id}`);
-    }
+  const handleDeckPress = (userDeck: UserDeck) => {
+    router.push(`/deck/${userDeck.id}`);
   };
 
   // FAB action handlers

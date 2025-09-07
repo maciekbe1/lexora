@@ -41,8 +41,8 @@ export function useDeckDetail() {
     return () => resetDeck();
   }, [resetDeck]);
 
-  // Loading state - use store's loading state  
-  const showLoading = isLoading;
+  // Loading state - disable loading screen to prevent flash  
+  const showLoading = false;
 
   // Derived data
   const deckName = deck?.deck_name || deck?.custom_name || "Talia bez nazwy";

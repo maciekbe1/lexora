@@ -1,7 +1,7 @@
 import { UserDeck } from "@/types/flashcard";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, Pressable, View } from "react-native";
 import { useAppTheme } from "@/theme/useAppTheme";
 
 interface DeckCardProps {
@@ -24,7 +24,14 @@ export function DeckCard({ item, onPress }: DeckCardProps) {
   const dueToday = item.due_today ?? 0;
 
   return (
-    <TouchableOpacity style={[styles.deckCard, { backgroundColor: colors.surface }]} onPress={() => onPress(item)}>
+    <Pressable 
+      style={({ pressed }) => [
+        styles.deckCard, 
+        { backgroundColor: colors.surface },
+        pressed && { opacity: 0.98, transform: [{ scale: 0.995 }] }
+      ]} 
+      onPress={() => onPress(item)}
+    >
       <View style={styles.deckHeader}>
         <View style={styles.deckIcon}>
           <Ionicons name="library" size={24} color={colors.primary} />
@@ -58,7 +65,7 @@ export function DeckCard({ item, onPress }: DeckCardProps) {
           <Text style={styles.statLabel}>Opanowane</Text>
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 

@@ -58,7 +58,7 @@ export function DeckInfo({
       >
         <Ionicons name="play" size={20} color="#fff" />
         <Text style={styles.studyButtonText}>
-          Rozpocznij naukę {dueToday !== null ? `(${dueToday})` : flashcardCount > 0 ? `(${flashcardCount})` : ''}
+          Rozpocznij naukę
         </Text>
       </TouchableOpacity>
     </>

@@ -108,7 +108,7 @@ export default function RootLayout() {
               gestureEnabled: useUIOverlayStore.getState().overlayCount === 0,
               fullScreenGestureEnabled:
                 Platform.OS === "ios" && useUIOverlayStore.getState().overlayCount === 0,
-              animation: "none", // Remove navigation animations to prevent flash
+              animation: Platform.OS === "ios" ? "slide_from_right" : "slide_from_right",
               gestureDirection: "horizontal",
             }}
           >
