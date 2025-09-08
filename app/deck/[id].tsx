@@ -54,7 +54,11 @@ export default function DeckDetailScreen() {
     item: CustomFlashcard;
     index: number;
   }) => (
-    <FlashcardItem flashcard={item} index={index} onEdit={handleEditFlashcard} />
+    <FlashcardItem 
+      flashcard={item} 
+      index={index} 
+      onEdit={deck?.is_custom ? handleEditFlashcard : undefined} 
+    />
   );
 
   // Render empty state using the EmptyFlashcardsState component

@@ -100,6 +100,24 @@ export class LocalDatabase {
         );
       `);
 
+      // Create template flashcards table
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS template_flashcards (
+          id TEXT PRIMARY KEY,
+          template_deck_id TEXT NOT NULL,
+          front_text TEXT NOT NULL,
+          back_text TEXT NOT NULL,
+          position INTEGER NOT NULL,
+          front_image_url TEXT,
+          back_image_url TEXT,
+          front_audio_url TEXT,
+          back_audio_url TEXT,
+          hint_text TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        `);
+
       // Migrate user_decks table to unified model
       await this.migrateToUnifiedModel(db);
       
@@ -449,6 +467,64 @@ export class LocalDatabase {
   }
 
   /**
+   * Get template flashcards for a template deck
+   */
+  async getTemplateFlashcards(templateDeckId: string): Promise<any[]> {
+    try {
+      const db = await this.getDb();
+      const result = await db.getAllAsync(
+        `SELECT * FROM template_flashcards 
+         WHERE template_deck_id = ? 
+         ORDER BY position ASC`,
+        [templateDeckId]
+      );
+      return result || [];
+    } catch (error) {
+      console.error('Error getting template flashcards:', error);
+      return [];
+    }
+  }
+
+  async insertTemplateFlashcard(flashcard: any): Promise<void> {
+    try {
+      const db = await this.getDb();
+      await db.runAsync(
+        `INSERT OR REPLACE INTO template_flashcards 
+         (id, template_deck_id, front_text, back_text, position, front_image_url, back_image_url,
+          front_audio_url, back_audio_url, hint_text, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          flashcard.id,
+          flashcard.template_deck_id,
+          flashcard.front_text,
+          flashcard.back_text,
+          flashcard.position,
+          flashcard.front_image_url || null,
+          flashcard.back_image_url || null,
+          flashcard.front_audio_url || null,
+          flashcard.back_audio_url || null,
+          flashcard.hint_text || null,
+          flashcard.created_at,
+          flashcard.updated_at,
+        ]
+      );
+    } catch (error) {
+      console.error('Error inserting template flashcard:', error);
+      throw error;
+    }
+  }
+
+  async deleteUserDeck(userDeckId: string): Promise<void> {
+    try {
+      const db = await this.getDb();
+      await db.runAsync('DELETE FROM user_decks WHERE id = ?', [userDeckId]);
+    } catch (error) {
+      console.error('Error deleting user deck:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Update deck flashcard count based on actual flashcard count
    */
   async updateDeckFlashcardCount(userDeckId: string): Promise<void> {
@@ -480,31 +556,67 @@ export class LocalDatabase {
     await this.ensureProgressTable(db);
     const nowIso = new Date().toISOString();
     
-    // Get all flashcards with their progress status
-    const allCards = await db.getAllAsync<any>(
-      `SELECT 
-        f.*,
-        COALESCE(p.status, 'new') AS progress_status,
-        p.next_review_at,
-        p.last_reviewed_at,
-        p.repetition,
-        p.easiness_factor,
-        p.interval_days
-      FROM custom_flashcards f
-      LEFT JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
-      WHERE f.user_deck_id = ?
-      ORDER BY 
-        CASE 
-          WHEN p.status = 'review' AND (p.next_review_at IS NULL OR p.next_review_at <= ?) THEN 1
-          WHEN p.status = 'learning' OR p.status IS NULL THEN 2
-          WHEN p.status = 'new' THEN 3
-          WHEN p.status = 'mastered' THEN 4
-          ELSE 5
-        END,
-        f.position ASC
-      `,
-      [deckId, nowIso]
+    // Get user deck info to check if it's a template deck
+    const userDeck = await db.getFirstAsync<any>(
+      `SELECT template_deck_id FROM user_decks WHERE id = ?`,
+      [deckId]
     );
+
+    let allCards: any[] = [];
+
+    if (userDeck?.template_deck_id) {
+      // This is a template deck - get flashcards from template_flashcards table
+      allCards = await db.getAllAsync<any>(
+        `SELECT 
+          f.*,
+          COALESCE(p.status, 'new') AS progress_status,
+          p.next_review_at,
+          p.last_reviewed_at,
+          p.repetition,
+          p.easiness_factor,
+          p.interval_days
+        FROM template_flashcards f
+        LEFT JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+        WHERE f.template_deck_id = ?
+        ORDER BY 
+          CASE 
+            WHEN p.status = 'review' AND (p.next_review_at IS NULL OR p.next_review_at <= ?) THEN 1
+            WHEN p.status = 'learning' OR p.status IS NULL THEN 2
+            WHEN p.status = 'new' THEN 3
+            WHEN p.status = 'mastered' THEN 4
+            ELSE 5
+          END,
+          f.position ASC
+        `,
+        [userDeck.template_deck_id, nowIso]
+      );
+    } else {
+      // This is a custom deck - get flashcards from custom_flashcards table
+      allCards = await db.getAllAsync<any>(
+        `SELECT 
+          f.*,
+          COALESCE(p.status, 'new') AS progress_status,
+          p.next_review_at,
+          p.last_reviewed_at,
+          p.repetition,
+          p.easiness_factor,
+          p.interval_days
+        FROM custom_flashcards f
+        LEFT JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+        WHERE f.user_deck_id = ?
+        ORDER BY 
+          CASE 
+            WHEN p.status = 'review' AND (p.next_review_at IS NULL OR p.next_review_at <= ?) THEN 1
+            WHEN p.status = 'learning' OR p.status IS NULL THEN 2
+            WHEN p.status = 'new' THEN 3
+            WHEN p.status = 'mastered' THEN 4
+            ELSE 5
+          END,
+          f.position ASC
+        `,
+        [deckId, nowIso]
+      );
+    }
 
     return allCards;
   }
@@ -823,35 +935,67 @@ export class LocalDatabase {
     // Debug: show stats BEFORE recalculation
     await this.debugDeckStats(userDeckId, 'BEFORE RECALC');
     
-    // Count each bucket according to learning flow:
-    // 1. Nowe: karty bez progressu lub ze statusem 'new'
-    const newRow = await db.getFirstAsync<any>(
-      `SELECT COUNT(*) AS c FROM custom_flashcards f
-        LEFT JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
-       WHERE f.user_deck_id = ? AND (p.flashcard_id IS NULL OR p.status = 'new')`,
+    // Check if this is a template deck
+    const userDeck = await db.getFirstAsync<any>(
+      `SELECT template_deck_id FROM user_decks WHERE id = ?`,
       [userDeckId]
     );
     
-    // 2. Uczę się: karty ze statusem 'learning'
-    const learningRow = await db.getFirstAsync<any>(
-      `SELECT COUNT(*) AS c FROM custom_flashcards f
-         JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
-        WHERE f.user_deck_id = ? AND p.status = 'learning'`,
-      [userDeckId]
-    );
+    const isTemplateDeck = Boolean(userDeck?.template_deck_id);
+    console.log(`📊 Recalculating stats for ${isTemplateDeck ? 'template' : 'custom'} deck ${userDeckId}`);
+    
+    let newRow: any, learningRow: any, masteredRow: any;
+    
+    if (isTemplateDeck) {
+      // For template decks: count template_flashcards with progress
+      newRow = await db.getFirstAsync<any>(
+        `SELECT COUNT(*) AS c FROM template_flashcards f
+          LEFT JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+         WHERE f.template_deck_id = ? AND (p.flashcard_id IS NULL OR p.status = 'new')`,
+        [userDeck.template_deck_id]
+      );
+      
+      learningRow = await db.getFirstAsync<any>(
+        `SELECT COUNT(*) AS c FROM template_flashcards f
+           JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+          WHERE f.template_deck_id = ? AND p.status = 'learning'`,
+        [userDeck.template_deck_id]
+      );
+      
+      masteredRow = await db.getFirstAsync<any>(
+        `SELECT COUNT(*) AS c FROM template_flashcards f
+           JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+          WHERE f.template_deck_id = ? AND p.status IN ('mastered', 'review')`,
+        [userDeck.template_deck_id]
+      );
+    } else {
+      // For custom decks: count custom_flashcards with progress  
+      newRow = await db.getFirstAsync<any>(
+        `SELECT COUNT(*) AS c FROM custom_flashcards f
+          LEFT JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+         WHERE f.user_deck_id = ? AND (p.flashcard_id IS NULL OR p.status = 'new')`,
+        [userDeckId]
+      );
+      
+      learningRow = await db.getFirstAsync<any>(
+        `SELECT COUNT(*) AS c FROM custom_flashcards f
+           JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+          WHERE f.user_deck_id = ? AND p.status = 'learning'`,
+        [userDeckId]
+      );
+      
+      masteredRow = await db.getFirstAsync<any>(
+        `SELECT COUNT(*) AS c FROM custom_flashcards f
+           JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
+          WHERE f.user_deck_id = ? AND p.status IN ('mastered', 'review')`,
+        [userDeckId]
+      );
+    }
     
     // Simplify: remove review stats for now - just show new, learning, mastered
     const nextNew = Number(newRow?.c || 0);
     const nextLearning = Number(learningRow?.c || 0);
     const nextReview = 0; // Always 0 for now
-    
-    // 3. Opanowane: wszystkie inne karty (mastered + review)
-    const masteredRow = await db.getFirstAsync<any>(
-      `SELECT COUNT(*) AS c FROM custom_flashcards f
-         JOIN custom_flashcard_progress p ON p.flashcard_id = f.id
-        WHERE f.user_deck_id = ? AND p.status IN ('mastered', 'review')`,
-      [userDeckId]
-    );
     const nextMastered = Number(masteredRow?.c || 0);
 
     console.log(`🔄 Recalculating deck ${userDeckId}: new=${nextNew}, learning=${nextLearning}, mastered=${nextMastered}`);
@@ -1077,6 +1221,22 @@ export class LocalDatabase {
       `INSERT OR IGNORE INTO deletion_queue (entity_type, entity_id) VALUES (?, ?)`,
       [entityType, entityId]
     );
+  }
+
+  /**
+   * Get pending deletions from queue
+   */
+  async getPendingDeletions(): Promise<Array<{entity_type: string, entity_id: string, record_id: string}>> {
+    try {
+      const db = await this.getDb();
+      const result = await db.getAllAsync(
+        `SELECT entity_type, entity_id, entity_id as record_id FROM deletion_queue`
+      );
+      return result || [];
+    } catch (error) {
+      console.error('Error getting pending deletions:', error);
+      return [];
+    }
   }
 
   async getDeletionQueue(): Promise<{ entity_type: string; entity_id: string }[]> {

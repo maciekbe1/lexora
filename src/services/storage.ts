@@ -150,7 +150,7 @@ export class StorageService {
       const bucketExists = buckets?.some(bucket => bucket.name === this.bucketName);
 
       if (!bucketExists) {
-        console.warn(`Storage bucket '${this.bucketName}' does not exist. Please run the database migration script.`);
+        console.log(`Storage bucket '${this.bucketName}' not found in bucket list (may be a permissions issue)`);
       } else {
         console.log(`Storage bucket '${this.bucketName}' is available`);
       }

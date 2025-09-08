@@ -5,6 +5,7 @@ import { User } from '@supabase/supabase-js';
 import * as Crypto from 'expo-crypto';
 import { useState } from 'react';
 import { Alert } from 'react-native';
+import { supabase } from '../../lib/supabase';
 
 // Helpers extracted to reduce hook size
 // Removed syncUser - sync happens only on login and manual refresh
@@ -87,9 +88,40 @@ export function useDeckManagement(user: User | null) {
 
   const fetchUserDecks = async () => {
     if (!user) return;
-
+    
+    console.log('🔄 fetchUserDecks called');
     try {
+      // First, get remote decks to ensure sync
+      const { data: remoteDecks, error: remoteError } = await supabase
+        .from('user_decks')
+        .select('*')
+        .eq('user_id', user.id);
+        
+      if (remoteError) {
+        console.error('Error fetching remote decks:', remoteError);
+      } else if (remoteDecks) {
+        console.log(`📡 Found ${remoteDecks.length} decks in remote database`);
+        
+        // Sync any missing decks to local database (except those marked for deletion)
+        const pendingDeletions = await localDatabase.getPendingDeletions();
+        const deletionIds = new Set(pendingDeletions.map(d => d.record_id));
+        
+        for (const remoteDeck of remoteDecks) {
+          try {
+            // Skip syncing decks that are marked for deletion locally
+            if (!deletionIds.has(remoteDeck.id)) {
+              await localDatabase.insertUserDeck(remoteDeck);
+            } else {
+              console.log(`⏭️ Skipping sync for deck ${remoteDeck.id} - marked for deletion`);
+            }
+          } catch (error) {
+            console.log(`⚠️ Deck ${remoteDeck.id} sync failed:`, error);
+          }
+        }
+      }
+      
       const localDecks = await localDatabase.getUserDecks(user.id);
+      console.log(`🔍 Raw local decks count: ${localDecks.length}`);
 
       const withDue = await (async () => {
         const result = await Promise.all(
@@ -106,7 +138,9 @@ export function useDeckManagement(user: User | null) {
       })();
 
       if (withDue.length > 0) {
-        console.log(`Loaded ${localDecks.length} decks from local database`);
+        console.log(`✅ Loaded ${localDecks.length} decks from local database`);
+        console.log('📋 Deck names:', withDue.map(d => d.deck_name || d.custom_name));
+        console.log('🆔 Deck IDs:', withDue.map(d => `${d.id} (${d.is_custom ? 'custom' : 'template'})`));
         setUserDecks(withDue);
 
         // Do not show skeleton when we already have local data
@@ -135,54 +169,46 @@ export function useDeckManagement(user: User | null) {
 
   const removeTemplateFromCollection = async (userDeck: UserDeck) => {
     try {
-      await localDatabase.enqueueDeletion('deck', userDeck.id);
+      console.log(`🗑️ Removing template deck ${userDeck.id} from collection`);
+      
+      // Delete from remote database immediately
+      const { error: remoteError } = await supabase
+        .from('user_decks')
+        .delete()
+        .eq('id', userDeck.id)
+        .eq('user_id', user!.id);
+        
+      if (remoteError) {
+        console.error('Error removing deck from remote:', remoteError);
+        Alert.alert('Błąd', 'Nie udało się usunąć talii ze zdalnej bazy');
+        throw remoteError;
+      }
+      
+      // Delete from local database immediately
+      await localDatabase.deleteUserDeck(userDeck.id);
+      
+      console.log(`✅ Successfully removed template deck ${userDeck.id} from collection`);
+      
       await fetchUserDecks();
-      Alert.alert('Sukces', 'Talia została usunięta z kolekcji');
+      // No success alert - just return success
     } catch (error) { 
       console.error('Error removing deck:', error); 
       Alert.alert('Błąd', 'Nie udało się usunąć talii'); 
+      throw error; // Re-throw so caller knows it failed
     }
   };
 
   const removeDeck = async (userDeck: UserDeck) => {
-    const deckName = userDeck.deck_name || 'tę talię';
-
-    const hasProgress = false; // TODO: Calculate progress from actual data
-
-    let message: string;
-    if (userDeck.is_custom) {
-      message = hasProgress
-        ? `Czy na pewno chcesz usunąć "${deckName}" całkowicie?\n\nUWAGA: Usuniesz talię, wszystkie fiszki, zdjęcia i cały postęp na zawsze. Tej operacji nie można cofnąć!`
-        : `Czy na pewno chcesz usunąć "${deckName}" całkowicie?\n\nUsuniesz talię i wszystkie fiszki na zawsze. Tej operacji nie można cofnąć!`;
-    } else {
-      message = hasProgress
-        ? `Czy na pewno chcesz usunąć "${deckName}" z kolekcji?\n\nUWAGA: Stracisz cały postęp nauki dla tej talii.`
-        : `Czy na pewno chcesz usunąć "${deckName}" z kolekcji?`;
+    try {
+      if (userDeck.is_custom) {
+        await deleteCustomDeckCompletely(userDeck);
+      } else {
+        await removeTemplateFromCollection(userDeck);
+      }
+    } catch (error) {
+      console.error('Error removing deck:', error);
+      Alert.alert('Błąd', 'Nie udało się usunąć talii');
     }
-
-    Alert.alert(
-      userDeck.is_custom ? 'Usuń talię całkowicie' : 'Usuń z kolekcji',
-      message,
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Usuń',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              if (userDeck.is_custom) {
-                await deleteCustomDeckCompletely(userDeck);
-              } else {
-                await removeTemplateFromCollection(userDeck);
-              }
-            } catch (error) {
-              console.error('Error removing deck:', error);
-              Alert.alert('Błąd', 'Nie udało się usunąć talii');
-            }
-          },
-        },
-      ]
-    );
   };
 
   const createCustomDeck = async (

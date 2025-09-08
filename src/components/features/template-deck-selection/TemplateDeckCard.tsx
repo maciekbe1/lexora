@@ -102,7 +102,7 @@ export function TemplateDeckCard({
           isAdding && styles.addButtonAdding,
         ]}
         onPress={onAdd}
-        disabled={isAdded || isAdding}
+        disabled={isAdding}
       >
         {isAdding ? (
           <ActivityIndicator size="small" color="#ffffff" />

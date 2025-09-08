@@ -39,9 +39,19 @@ export function TemplateDeckSelectionModal({
     loading,
     addingDeckId,
     addDeckToCollection,
+    refreshData,
   } = useTemplateDeckSelection(user?.id);
 
-  const availableDecks = templateDecks.filter((d) => !userDeckIds.has(d.id));
+  // Refresh data when modal becomes visible
+  React.useEffect(() => {
+    if (visible && refreshData) {
+      console.log('🔄 Template modal opened, refreshing data...');
+      refreshData();
+    }
+  }, [visible, refreshData]);
+
+  // Show all template decks, not just available ones
+  const availableDecks = templateDecks;
 
   return (
     <BaseModal

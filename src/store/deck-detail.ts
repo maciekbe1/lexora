@@ -44,10 +44,10 @@ export const useDeckDetailStore = create<DeckDetailState>((set, get) => ({
         return;
       }
 
-      // Load flashcards if it's a custom deck
+      // Load flashcards - custom or template
       const deckFlashcards = foundDeck.is_custom 
         ? await localDatabase.getCustomFlashcards(deckId)
-        : [];
+        : await localDatabase.getTemplateFlashcards(foundDeck.template_deck_id!);
 
       // Fast update with essential data - use flashcard count as fallback
       set({

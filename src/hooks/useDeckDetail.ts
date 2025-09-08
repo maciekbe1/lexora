@@ -1,14 +1,15 @@
 import { localDatabase } from '@/services/local-database';
 import { useAuthStore, useDeckDetailStore } from "@/store";
 import type { CustomFlashcard } from "@/types/flashcard";
-import { useLocalSearchParams, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Alert } from 'react-native';
-import { router } from 'expo-router';
+import { useDeckManagement } from './useDeckManagement';
 
 export function useDeckDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuthStore();
+  const { removeDeck } = useDeckManagement(user);
 
   // Modal states
   const [showAddFlashcardModal, setShowAddFlashcardModal] = useState(false);
@@ -21,7 +22,6 @@ export function useDeckDetail() {
     deck,
     flashcards,
     dueToday,
-    isLoading,
     isRefreshing,
     isDeleting,
     loadDeckData,
@@ -181,8 +181,44 @@ export function useDeckDetail() {
   }, []);
 
   const handleDeleteDeck = useCallback(async () => {
-    Alert.alert("Info", "Delete deck - coming soon");
-  }, []);
+    if (!deck) return;
+    
+    const deckName = deck.deck_name || 'tę talię';
+
+    const hasProgress = false; // TODO: Calculate progress from actual data
+
+    let message: string;
+    if (deck.is_custom) {
+      message = hasProgress
+        ? `Czy na pewno chcesz usunąć "${deckName}" całkowicie?\n\nUWAGA: Usuniesz talię, wszystkie fiszki, zdjęcia i cały postęp na zawsze. Tej operacji nie można cofnąć!`
+        : `Czy na pewno chcesz usunąć "${deckName}" całkowicie?\n\nUsuniesz talię i wszystkie fiszki na zawsze. Tej operacji nie można cofnąć!`;
+    } else {
+      message = hasProgress
+        ? `Czy na pewno chcesz usunąć "${deckName}" z kolekcji?\n\nUWAGA: Stracisz cały postęp nauki dla tej talii.`
+        : `Czy na pewno chcesz usunąć "${deckName}" z kolekcji?`;
+    }
+
+    Alert.alert(
+      deck.is_custom ? 'Usuń talię całkowicie' : 'Usuń z kolekcji',
+      message,
+      [
+        { text: 'Nie', style: 'cancel' },
+        {
+          text: 'Tak',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeDeck(deck);
+              // Navigate back only after successful deletion
+              router.back();
+            } catch (error) {
+              console.error('Failed to delete deck:', error);
+            }
+          },
+        },
+      ]
+    );
+  }, [deck, removeDeck]);
 
   // Create flashcard handler that handles both create and update
   const handleFlashcardSubmit = editingFlashcard

@@ -33,15 +33,16 @@ export function useDashboard() {
   }, [isInitialized]);
 
   // Refresh decks when screen comes into focus (e.g., after deleting a deck)
-  // Only if more than 1 second has passed since last fetch to avoid spam
+  // Always refresh when coming back to dashboard to ensure data is up to date
   useFocusEffect(
     useCallback(() => {
-      const now = Date.now();
-      if (isInitialized && now - lastFetchTime > 1000) {
+      if (isInitialized) {
+        const now = Date.now();
         setLastFetchTime(now);
         fetchUserDecks();
+        console.log('📱 Dashboard focused - refreshing deck list');
       }
-    }, [isInitialized, lastFetchTime])
+    }, [isInitialized]) // Remove fetchUserDecks from dependencies to avoid loop
   );
 
   // Exposed pull-to-refresh + header refresh that also stamps last fetch time
