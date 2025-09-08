@@ -57,7 +57,7 @@ export default function DeckDetailScreen() {
     <FlashcardItem 
       flashcard={item} 
       index={index} 
-      onEdit={deck?.is_custom ? handleEditFlashcard : undefined} 
+      onEdit={deck?.is_custom ? handleEditFlashcard : (() => {})} 
     />
   );
 
