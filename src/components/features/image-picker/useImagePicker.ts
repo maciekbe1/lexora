@@ -170,7 +170,9 @@ export function useImagePicker(userId: string | undefined, onImageSelected: (url
         try {
           const parsed = JSON.parse(val);
           if (Array.isArray(parsed)) setRecentQueries(parsed.map((s) => String(s).slice(0, 30)).slice(0, 10));
-        } catch {}
+        } catch {
+          // Ignore JSON parsing errors
+        }
       })
       .catch(() => {});
   }, []);

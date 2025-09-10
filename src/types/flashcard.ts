@@ -22,30 +22,30 @@ export interface Language {
 export interface UserDeck {
   id: string;
   user_id: string;
-  template_deck_id?: string; // Optional for custom decks
+  template_deck_id?: string | null | undefined; // Optional for custom decks, can be null from database
   added_at: string;
-  custom_name?: string;
-  is_favorite: boolean;
-  is_custom: boolean; // True if user created this deck
+  custom_name?: string | null | undefined;
+  is_favorite: boolean | null; // Can be null from database
+  is_custom: boolean | null; // Can be null from database
 
   // Unified deck data (populated for both template and custom decks)
-  deck_name?: string;
-  deck_description?: string;
-  deck_language?: string;
-  deck_cover_image_url?: string;
-  deck_tags?: string[];
-  deck_difficulty_level?: number;
-  deck_flashcard_count?: number;
-  deck_created_by?: string;
-  deck_is_active?: boolean;
-  deck_created_at?: string;
-  deck_updated_at?: string;
+  deck_name?: string | null | undefined;
+  deck_description?: string | null | undefined;
+  deck_language?: string | null | undefined;
+  deck_cover_image_url?: string | null | undefined;
+  deck_tags?: string[]; // Always an array after validation transformation
+  deck_difficulty_level?: number | null | undefined;
+  deck_flashcard_count?: number | null | undefined;
+  deck_created_by?: string | null | undefined;
+  deck_is_active?: boolean | null | undefined;
+  deck_created_at?: string | null | undefined;
+  deck_updated_at?: string | null | undefined;
 
   // Study stats (local)
-  stats_new?: number;
-  stats_learning?: number;
-  stats_review?: number;
-  stats_mastered?: number;
+  stats_new?: number | null | undefined;
+  stats_learning?: number | null | undefined;
+  stats_review?: number | null | undefined;
+  stats_mastered?: number | null | undefined;
   due_today?: number; // computed locally for dashboard
 
 }

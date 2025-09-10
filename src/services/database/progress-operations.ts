@@ -27,9 +27,9 @@ export class ProgressOperations extends BaseDatabaseService {
           cf.back_image_url,
           cf.position,
           COALESCE(p.status, 'new') as progress_status,
-          p.next_due_date,
-          p.last_study_date,
-          p.repetition_number,
+          p.next_review_at,
+          p.last_reviewed_at,
+          p.repetition,
           p.easiness_factor,
           p.interval_days
         FROM custom_flashcards cf
@@ -47,9 +47,9 @@ export class ProgressOperations extends BaseDatabaseService {
           tf.back_image_url,
           tf.position,
           COALESCE(p.status, 'new') as progress_status,
-          p.next_due_date,
-          p.last_study_date,
-          p.repetition_number,
+          p.next_review_at,
+          p.last_reviewed_at,
+          p.repetition,
           p.easiness_factor,
           p.interval_days
         FROM template_flashcards tf
@@ -71,7 +71,7 @@ export class ProgressOperations extends BaseDatabaseService {
     const result = await db.getFirstAsync<{ count: number }>(`
       SELECT COUNT(*) as count FROM custom_flashcard_progress p
       JOIN custom_flashcards cf ON cf.id = p.flashcard_id
-      WHERE cf.user_deck_id = ? AND (p.next_due_date <= ? OR p.next_due_date IS NULL)
+      WHERE cf.user_deck_id = ? AND (p.next_review_at <= ? OR p.next_review_at IS NULL)
     `, [deckId, today]);
     
     return result?.count || 0;
@@ -82,8 +82,9 @@ export class ProgressOperations extends BaseDatabaseService {
     
     const rows = await db.getAllAsync<any>(`
       SELECT 
-        flashcard_id, status, last_study_date, next_due_date,
-        repetition_number, easiness_factor, interval_days, is_dirty
+        flashcard_id, status, last_reviewed_at, next_review_at,
+        repetition, easiness_factor, interval_days, is_dirty,
+        correct_count, incorrect_count, created_at, updated_at
       FROM custom_flashcard_progress
       WHERE is_dirty = 1
     `);
@@ -98,17 +99,20 @@ export class ProgressOperations extends BaseDatabaseService {
     try {
       await db.runAsync(`
         INSERT OR REPLACE INTO custom_flashcard_progress
-        (flashcard_id, status, last_study_date, next_due_date, repetition_number, easiness_factor, interval_days, is_dirty)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        (flashcard_id, user_deck_id, status, last_reviewed_at, next_review_at, repetition, easiness_factor, interval_days, is_dirty, correct_count, incorrect_count, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `, [
         progress.flashcard_id,
+        progress.user_deck_id,
         progress.status || 'new',
-        progress.last_study_date,
-        progress.next_due_date,
-        progress.repetition_number || 0,
+        progress.last_reviewed_at,
+        progress.next_review_at,
+        progress.repetition || 0,
         progress.easiness_factor || 2.5,
         progress.interval_days || 1,
-        progress.is_dirty ?? 1
+        progress.is_dirty ?? 1,
+        progress.correct_count || 0,
+        progress.incorrect_count || 0
       ]);
       
       console.log(`✅ Progress upserted for flashcard: ${progress.flashcard_id}`);
@@ -136,14 +140,26 @@ export class ProgressOperations extends BaseDatabaseService {
     let newInterval: number;
     let nextDueDate: string;
     
+    let correctCount = 0;
+    let incorrectCount = 0;
+    
     if (existingProgress) {
-      newRepetition = existingProgress.repetition_number || 0;
+      newRepetition = existingProgress.repetition || 0;
       newEasinessFactor = existingProgress.easiness_factor || 2.5;
       newInterval = existingProgress.interval_days || 1;
+      correctCount = existingProgress.correct_count || 0;
+      incorrectCount = existingProgress.incorrect_count || 0;
     } else {
       newRepetition = 0;
       newEasinessFactor = 2.5;
       newInterval = 1;
+    }
+    
+    // Update answer counts
+    if (knew) {
+      correctCount += 1;
+    } else {
+      incorrectCount += 1;
     }
     
     if (knew) {
@@ -173,17 +189,21 @@ export class ProgressOperations extends BaseDatabaseService {
     
     await db.runAsync(`
       INSERT OR REPLACE INTO custom_flashcard_progress
-      (flashcard_id, status, last_study_date, next_due_date, repetition_number, easiness_factor, interval_days, is_dirty)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      (flashcard_id, user_deck_id, status, last_reviewed_at, next_review_at, repetition, easiness_factor, interval_days, is_dirty, correct_count, incorrect_count, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM custom_flashcard_progress WHERE flashcard_id = ?), CURRENT_TIMESTAMP), CURRENT_TIMESTAMP)
     `, [
       flashcardId,
+      _deckId,
       newStatus,
       today,
       nextDueDate,
       newRepetition,
       newEasinessFactor,
       newInterval,
-      1
+      1,
+      correctCount,
+      incorrectCount,
+      flashcardId
     ]);
     
     console.log(`✅ Progress updated: ${newStatus}, next due: ${nextDueDate}, interval: ${newInterval}d`);

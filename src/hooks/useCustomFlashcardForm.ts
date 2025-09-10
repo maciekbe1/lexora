@@ -80,7 +80,7 @@ export function useCustomFlashcardForm({
   useEffect(() => {
     if (!visible) return;
     const deck = customDecks.find((d) => d.id === selectedDeck);
-    const targetLang = normalizeLangCode(targetLangOverride || deck?.deck_language);
+    const targetLang = normalizeLangCode(targetLangOverride || deck?.deck_language || undefined);
 
     if (!targetLang || !frontText.trim()) return;
 
@@ -108,7 +108,7 @@ export function useCustomFlashcardForm({
     if (!visible || !selectedDeck) return;
     (async () => {
       const deck = customDecks.find((d) => d.id === selectedDeck);
-      const existing = normalizeLangCode(deck?.deck_language);
+      const existing = normalizeLangCode(deck?.deck_language || undefined);
       if (!existing) {
         const cd = await localDatabase.getCustomDeckById(selectedDeck);
         const lang = normalizeLangCode(cd?.language);
@@ -122,7 +122,7 @@ export function useCustomFlashcardForm({
   // Imperative translate action (for editing or manual trigger)
   const translateNow = async (opts?: { force?: boolean }) => {
     const deck = customDecks.find((d) => d.id === selectedDeck);
-    const targetLang = normalizeLangCode(targetLangOverride || deck?.deck_language);
+    const targetLang = normalizeLangCode(targetLangOverride || deck?.deck_language || undefined);
     if (!targetLang || !frontText.trim()) return;
     setIsTranslating(true);
     try {
@@ -194,7 +194,7 @@ export function useCustomFlashcardForm({
     // data
     customDecks,
     targetLang: normalizeLangCode(
-      targetLangOverride || customDecks.find((d) => d.id === selectedDeck)?.deck_language
+      targetLangOverride || customDecks.find((d) => d.id === selectedDeck)?.deck_language || undefined
     ),
 
     // state

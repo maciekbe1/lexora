@@ -1,6 +1,6 @@
 import { localDatabase } from '@/services/local-database';
 import { useAuthStore, useDeckDetailStore } from "@/store";
-import type { CustomFlashcard } from "@/types/flashcard";
+import type { CustomFlashcard, UserDeck } from "@/types/flashcard";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Alert } from 'react-native';
@@ -16,6 +16,9 @@ export function useDeckDetail() {
   const [showEditDeckModal, setShowEditDeckModal] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [editingFlashcard, setEditingFlashcard] = useState<CustomFlashcard | null>(null);
+  
+  // Reorder mode state
+  const [isReorderMode, setIsReorderMode] = useState(false);
 
   // Use deck detail store
   const {
@@ -24,9 +27,14 @@ export function useDeckDetail() {
     dueToday,
     isRefreshing,
     isDeleting,
+    isSyncing,
+    syncError,
     loadDeckData,
     refreshDeck,
     resetDeck,
+    setSyncing,
+    setSyncError,
+    setSyncSuccess,
   } = useDeckDetailStore();
 
   // Initialize deck data on mount
@@ -70,6 +78,11 @@ export function useDeckDetail() {
 
   const handleToggleOptionsMenu = () => {
     setShowOptionsMenu(!showOptionsMenu);
+  };
+
+  const handleToggleReorderMode = () => {
+    setShowOptionsMenu(false); // Close options menu when toggling reorder
+    setIsReorderMode(!isReorderMode);
   };
 
   // Modal handlers
@@ -171,14 +184,74 @@ export function useDeckDetail() {
     Alert.alert("Info", "Delete flashcard - coming soon");
   }, []);
 
-  const handleUpdateDeck = useCallback(async (_deckData: {
+  const handleUpdateDeck = useCallback(async (deckData: {
     name: string;
     description: string;
     language: string;
     coverImageUrl: string;
   }) => {
-    Alert.alert("Info", "Update deck - coming soon");
-  }, []);
+    if (!deck || !user) return;
+    
+    try {
+      console.log('🔄 Updating deck with new data:', deckData);
+      console.log('📦 Current deck before update:', {
+        id: deck.id,
+        deck_name: deck.deck_name,
+        custom_name: deck.custom_name
+      });
+      
+      // Update deck using insertUserDeck (it does INSERT OR REPLACE)
+      const updatedDeck: UserDeck = {
+        ...deck,
+        deck_name: deckData.name,
+        deck_description: deckData.description,
+        deck_language: deckData.language,
+        deck_cover_image_url: deckData.coverImageUrl,
+        deck_updated_at: new Date().toISOString()
+      };
+      
+      console.log('📝 Saving updated deck to database:', {
+        id: updatedDeck.id,
+        deck_name: updatedDeck.deck_name,
+        deck_description: updatedDeck.deck_description
+      });
+      
+      await localDatabase.insertUserDeck(updatedDeck);
+      
+      console.log('✅ Deck saved to local database');
+      
+      // Reload deck data to show changes immediately
+      if (user?.id && id) {
+        console.log('🔄 Reloading deck data...');
+        await loadDeckData(user.id, id);
+        console.log('✅ Deck data reloaded');
+      }
+      
+      // Trigger sync to Supabase in the background
+      setSyncing(true);
+      setSyncError(null);
+      
+      try {
+        const syncResult = await localDatabase.syncToCloud();
+        if (syncResult) {
+          setSyncSuccess();
+          console.log('✅ Deck updated and synced to cloud successfully');
+        } else {
+          setSyncError('Failed to sync deck updates to cloud');
+          console.warn('⚠️ Deck updated locally but sync failed');
+        }
+      } catch (syncError) {
+        const errorMessage = syncError instanceof Error ? syncError.message : 'Unknown sync error';
+        setSyncError(errorMessage);
+        console.error('❌ Deck sync error:', syncError);
+      }
+      
+      Alert.alert("Sukces", "Talia została zaktualizowana");
+    } catch (error) {
+      console.error('Error updating deck:', error);
+      Alert.alert("Błąd", "Nie udało się zaktualizować talii");
+    }
+  }, [deck, user, id, loadDeckData, setSyncing, setSyncError, setSyncSuccess]);
 
   const handleDeleteDeck = useCallback(async () => {
     if (!deck) return;
@@ -220,6 +293,52 @@ export function useDeckDetail() {
     );
   }, [deck, removeDeck]);
 
+  const syncFlashcardPositions = useCallback(async () => {
+    if (!user || !deck) return;
+    
+    setSyncing(true);
+    setSyncError(null);
+    
+    try {
+      // Use the sync operation from the database service
+      const result = await localDatabase.syncFlashcardPositions();
+      
+      if (result.success) {
+        setSyncSuccess();
+        console.log(`✅ Synced ${result.synced} flashcard positions`);
+      } else {
+        setSyncError(result.error || 'Sync failed');
+        console.error('❌ Flashcard position sync failed:', result.error);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown sync error';
+      setSyncError(errorMessage);
+      console.error('❌ Flashcard position sync error:', error);
+    }
+  }, [user, deck, setSyncing, setSyncError, setSyncSuccess]);
+
+  const handleReorderFlashcards = useCallback(async (reorderedFlashcards: CustomFlashcard[]) => {
+    if (!user || !deck || !deck.is_custom) return;
+    
+    try {
+      // Update positions in the database (this marks flashcards as dirty)
+      const updates = reorderedFlashcards.map((card, index) => ({
+        id: card.id,
+        position: index + 1
+      }));
+      
+      await localDatabase.updateMultipleFlashcardPositions(updates);
+      
+      // Don't reload data - the UI already has the correct order
+      // Just trigger sync to save to cloud
+      await syncFlashcardPositions();
+      
+    } catch (error) {
+      console.error('Error reordering flashcards:', error);
+      Alert.alert("Błąd", "Nie udało się zmienić kolejności fiszek");
+    }
+  }, [user, deck, syncFlashcardPositions]);
+
   // Create flashcard handler that handles both create and update
   const handleFlashcardSubmit = editingFlashcard
     ? (data: Omit<CustomFlashcard, "id" | "created_at" | "updated_at">) => 
@@ -244,6 +363,11 @@ export function useDeckDetail() {
     showEditDeckModal,
     showOptionsMenu,
     editingFlashcard,
+    isReorderMode,
+    
+    // Sync states
+    isSyncing,
+    syncError,
 
     // Handlers
     onRefresh,
@@ -256,6 +380,8 @@ export function useDeckDetail() {
     handleToggleOptionsMenu,
     handleFlashcardSubmit,
     handleUpdateDeck,
+    handleReorderFlashcards,
+    handleToggleReorderMode,
 
     // Modal handlers
     modalHandlers,

@@ -104,7 +104,7 @@ export function useDeckManagement(user: User | null) {
         
         // Sync any missing decks to local database (except those marked for deletion)
         const pendingDeletions = await localDatabase.getPendingDeletions();
-        const deletionIds = new Set(pendingDeletions.map(d => d.record_id));
+        const deletionIds = new Set(pendingDeletions.map(d => d.entity_id));
         
         for (const remoteDeck of remoteDecks) {
           try {

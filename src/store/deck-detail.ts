@@ -13,11 +13,19 @@ interface DeckDetailState {
   isRefreshing: boolean;
   isDeleting: boolean;
   
+  // Sync states
+  isSyncing: boolean;
+  syncError: string | null;
+  lastSyncTime: Date | null;
+  
   // Actions
   loadDeckData: (userId: string, deckId: string) => Promise<void>;
   refreshDeck: (userId: string, deckId: string) => Promise<void>;
   updateDeckData: (deck: UserDeck, flashcards: CustomFlashcard[], dueToday: number) => void;
   setDeleting: (deleting: boolean) => void;
+  setSyncing: (syncing: boolean) => void;
+  setSyncError: (error: string | null) => void;
+  setSyncSuccess: () => void;
   resetDeck: () => void;
 }
 
@@ -29,20 +37,35 @@ export const useDeckDetailStore = create<DeckDetailState>((set, get) => ({
   isLoading: false,
   isRefreshing: false,
   isDeleting: false,
+  
+  // Sync state
+  isSyncing: false,
+  syncError: null,
+  lastSyncTime: null,
 
   // Load deck data (atomic update to prevent flashing)
   loadDeckData: async (userId: string, deckId: string) => {
     // Don't set isLoading to prevent flash during navigation
     
     try {
+      console.log(`🔍 Loading deck data for deck ${deckId}...`);
+      
       // Load only essential data first for fastest render
       const userDecks = await localDatabase.getUserDecks(userId);
       const foundDeck = userDecks.find((d) => d.id === deckId);
       
       if (!foundDeck) {
+        console.log(`⚠️ Deck not found: ${deckId}`);
         set({ deck: null, flashcards: [], dueToday: null });
         return;
       }
+      
+      console.log(`📦 Found deck:`, {
+        id: foundDeck.id,
+        deck_name: foundDeck.deck_name,
+        custom_name: foundDeck.custom_name,
+        is_dirty: foundDeck.is_dirty
+      });
 
       // Load flashcards - custom or template
       const deckFlashcards = foundDeck.is_custom 
@@ -88,6 +111,25 @@ export const useDeckDetailStore = create<DeckDetailState>((set, get) => ({
     set({ isDeleting: deleting });
   },
 
+  // Set syncing state
+  setSyncing: (syncing: boolean) => {
+    set({ isSyncing: syncing });
+  },
+
+  // Set sync error
+  setSyncError: (error: string | null) => {
+    set({ syncError: error, isSyncing: false });
+  },
+
+  // Mark sync as successful
+  setSyncSuccess: () => {
+    set({ 
+      isSyncing: false, 
+      syncError: null, 
+      lastSyncTime: new Date() 
+    });
+  },
+
   // Reset deck data (on unmount or error)
   resetDeck: () => {
     set({
@@ -97,6 +139,9 @@ export const useDeckDetailStore = create<DeckDetailState>((set, get) => ({
       isLoading: false,
       isRefreshing: false,
       isDeleting: false,
+      isSyncing: false,
+      syncError: null,
+      lastSyncTime: null,
     });
   },
 }));

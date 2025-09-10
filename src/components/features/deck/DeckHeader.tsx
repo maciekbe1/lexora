@@ -18,6 +18,8 @@ interface DeckHeaderProps {
   isCustomDeck: boolean;
   onAddFlashcard: () => void;
   onToggleOptions?: () => void;
+  isReorderMode?: boolean;
+  onExitReorderMode?: () => void;
 }
 
 export function DeckHeader({
@@ -26,6 +28,8 @@ export function DeckHeader({
   isCustomDeck,
   onAddFlashcard,
   onToggleOptions,
+  isReorderMode = false,
+  onExitReorderMode,
 }: DeckHeaderProps) {
   const insets = useSafeAreaInsets();
   const { colors } = useAppTheme();
@@ -58,31 +62,45 @@ export function DeckHeader({
           </TouchableOpacity>
           <View style={styles.headerContent}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>
-              {deckName}
+              {isReorderMode ? 'Układaj fiszki' : deckName}
             </Text>
             <Text style={[styles.headerSubtitle, { color: colors.mutedText }]}>
-              {flashcardCount} fiszek
+              {isReorderMode ? 'Przeciągnij fiszki, aby zmienić kolejność' : `${flashcardCount} fiszek`}
             </Text>
           </View>
           <View style={styles.rightActions}>
-            {isCustomDeck && (
+            {isReorderMode ? (
               <TouchableOpacity
-                style={styles.actionButton}
-                onPress={onAddFlashcard}
+                style={[styles.actionButton, styles.doneButton, { backgroundColor: colors.primary }]}
+                onPress={onExitReorderMode}
               >
-                <Ionicons name="add" size={24} color={colors.primary} />
+                <Ionicons name="checkmark" size={20} color="white" />
+                <Text style={[styles.doneButtonText, { color: "white" }]}>
+                  Gotowe
+                </Text>
               </TouchableOpacity>
+            ) : (
+              <>
+                {isCustomDeck && (
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={onAddFlashcard}
+                  >
+                    <Ionicons name="add" size={24} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.menuButton]}
+                  onPress={toggleOptions}
+                >
+                  <Ionicons
+                    name="ellipsis-vertical"
+                    size={20}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
+              </>
             )}
-            <TouchableOpacity
-              style={[styles.actionButton, styles.menuButton]}
-              onPress={toggleOptions}
-            >
-              <Ionicons
-                name="ellipsis-vertical"
-                size={20}
-                color={colors.primary}
-              />
-            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -123,5 +141,17 @@ const styles = StyleSheet.create({
   menuButton: {
     borderRadius: 8,
     borderWidth: 1,
+  },
+  doneButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 4,
+  },
+  doneButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

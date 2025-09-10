@@ -8,6 +8,7 @@ import { DeckOptionsMenu } from "@/components/features/deck-options-menu";
 import {
   EmptyFlashcardsState,
   FlashcardItem,
+  ReorderModeList,
 } from "@/components/features/flashcards";
 import { useDeckDetail } from "@/hooks/useDeckDetail";
 import type { CustomFlashcard } from "@/types/flashcard";
@@ -32,6 +33,9 @@ export default function DeckDetailScreen() {
     showOptionsMenu,
     editingFlashcard,
     dueToday,
+    isReorderMode,
+    isSyncing,
+    syncError,
     onRefresh,
     handleEditFlashcard,
     handleAddFlashcard,
@@ -42,24 +46,31 @@ export default function DeckDetailScreen() {
     handleToggleOptionsMenu,
     handleFlashcardSubmit,
     handleUpdateDeck,
+    handleReorderFlashcards,
+    handleToggleReorderMode,
     modalHandlers,
   } = useDeckDetail();
 
+  // Check if drag is enabled for custom decks only
+  const isDragEnabled = deck?.is_custom || false;
 
-  // Render flashcard item using the FlashcardItem component
+
+  // Render flashcard item
   const renderFlashcardItem = ({
     item,
     index,
   }: {
     item: CustomFlashcard;
     index: number;
-  }) => (
-    <FlashcardItem 
-      flashcard={item} 
-      index={index} 
-      onEdit={deck?.is_custom ? handleEditFlashcard : (() => {})} 
-    />
-  );
+  }) => {
+    return (
+      <FlashcardItem 
+        flashcard={item} 
+        index={index} 
+        onEdit={deck?.is_custom ? handleEditFlashcard : (() => {})} 
+      />
+    );
+  };
 
   // Render empty state using the EmptyFlashcardsState component
   const renderEmptyState = () => (
@@ -92,38 +103,52 @@ export default function DeckDetailScreen() {
         isCustomDeck={deck.is_custom || false}
         onAddFlashcard={handleAddFlashcard}
         onToggleOptions={handleToggleOptionsMenu}
+        isReorderMode={isReorderMode}
+        onExitReorderMode={handleToggleReorderMode}
       />
 
-      {/* Deck Info and Study Button */}
-      <DeckInfo
-        deckDescription={deckDescription}
-        deckLanguage={deck.deck_language}
-        flashcardCount={flashcards.length}
-        dueToday={dueToday}
-        stats={{
-          new: deck.stats_new ?? 0,
-          learning: deck.stats_learning ?? 0,
-          mastered: deck.stats_mastered ?? 0,
-        }}
-        onStartStudy={handleStartStudy}
-      />
+      {/* Deck Info and Study Button - Hidden in reorder mode */}
+      {!isReorderMode && (
+        <DeckInfo
+          deckDescription={deckDescription}
+          deckLanguage={deck.deck_language || undefined}
+          flashcardCount={flashcards.length}
+          dueToday={dueToday}
+          stats={{
+            new: deck.stats_new ?? 0,
+            learning: deck.stats_learning ?? 0,
+            mastered: deck.stats_mastered ?? 0,
+          }}
+          onStartStudy={handleStartStudy}
+        />
+      )}
 
       {/* Flashcards List */}
-      <FlatList
-        data={flashcards}
-        renderItem={renderFlashcardItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.list,
-          flashcards.length === 0 && styles.emptyList,
-        ]}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={renderEmptyState}
-        showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-      />
+      {isReorderMode && isDragEnabled ? (
+        <ReorderModeList
+          flashcards={flashcards}
+          onReorder={handleReorderFlashcards}
+          isSyncing={isSyncing}
+          syncError={syncError}
+        />
+      ) : (
+        <FlatList
+          data={flashcards}
+          renderItem={renderFlashcardItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[
+            styles.list,
+            flashcards.length === 0 && styles.emptyList,
+          ]}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ListEmptyComponent={renderEmptyState}
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={isDragEnabled ? null : () => <View style={styles.separator} />}
+          scrollEnabled={true}
+        />
+      )}
 
       {/* Add/Edit Flashcard Modal */}
       <CustomFlashcardModal
@@ -150,7 +175,10 @@ export default function DeckDetailScreen() {
         onClose={modalHandlers.optionsMenu.hide}
         onEditDeck={handleEditDeck}
         onDeleteDeck={handleDeleteDeck}
+        onToggleReorderMode={handleToggleReorderMode}
         isDeleting={isDeleting}
+        isCustomDeck={deck?.is_custom || false}
+        isReorderMode={isReorderMode}
       />
     </View>
   );
