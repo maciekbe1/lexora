@@ -47,6 +47,9 @@ export interface UserDeck {
   stats_review?: number | null | undefined;
   stats_mastered?: number | null | undefined;
   due_today?: number; // computed locally for dashboard
+  
+  // Sync status
+  is_dirty?: boolean | number; // Can be boolean or number from database
 
 }
 

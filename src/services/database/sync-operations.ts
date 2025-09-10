@@ -249,20 +249,6 @@ export class SyncOperations extends BaseDatabaseService {
         };
         
         // Prepare deck data for Supabase
-        // Helper function to parse tags from JSON string to array
-        const parseTags = (tags: any): string[] => {
-          if (!tags) return [];
-          if (Array.isArray(tags)) return tags;
-          if (typeof tags === 'string') {
-            try {
-              const parsed = JSON.parse(tags);
-              return Array.isArray(parsed) ? parsed : [];
-            } catch {
-              return [];
-            }
-          }
-          return [];
-        };
         
         const deckUpdates = userDecksToSync.map(deck => ({
           id: deck.id,

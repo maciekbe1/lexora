@@ -113,6 +113,7 @@ export function ReorderModeList({
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
         showsVerticalScrollIndicator={false}
       />
     </View>
@@ -153,12 +154,16 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   list: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
+  separator: {
+    height: 16,
   },
   item: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,

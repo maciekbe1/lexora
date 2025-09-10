@@ -58,21 +58,21 @@ export function FlashcardItem({ flashcard, index, onEdit }: FlashcardItemProps) 
 const styles = StyleSheet.create({
   flashcardItem: {
     borderRadius: 12,
-    padding: 16,
+    padding: 18,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   flashcardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 14,
   },
   flashcardNumber: {
     fontSize: 16,
@@ -80,10 +80,10 @@ const styles = StyleSheet.create({
   },
   // Removed separate action buttons; whole card is tappable
   flashcardContent: {
-    gap: 16,
+    gap: 18,
   },
   cardSide: {
-    gap: 8,
+    gap: 10,
   },
   sideLabel: {
     fontSize: 14,
@@ -91,11 +91,11 @@ const styles = StyleSheet.create({
   },
   cardText: {
     fontSize: 16,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   cardImage: {
     width: "100%",
-    height: 120,
+    height: 140,
     borderRadius: 8,
     resizeMode: "cover",
   },

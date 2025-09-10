@@ -169,6 +169,11 @@ export class LocalDatabase {
     return this.flashcardOps.updateMultipleFlashcardPositions(updates);
   }
 
+  async syncCustomFlashcardsInBackground(userDeckId: string): Promise<void> {
+    await this.ensureInitialized();
+    return this.flashcardOps.syncCustomFlashcardsInBackground(userDeckId);
+  }
+
   // Progress operations with initialization checks
   async getStudyQueue(deckId: string): Promise<any[]> {
     await this.ensureInitialized();

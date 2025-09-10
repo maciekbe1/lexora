@@ -33,6 +33,36 @@ const TemplateFlashcardSchema = z.object({
 
 export class FlashcardOperations extends BaseDatabaseService {
 
+  /**
+   * Background sync for custom flashcards - call separately from loading
+   * This ensures critical loading path remains fast like template decks
+   */
+  async syncCustomFlashcardsInBackground(userDeckId: string): Promise<void> {
+    const db = await this.getDb();
+    
+    try {
+      console.log(`🔄 Background sync for deck ${userDeckId}...`);
+      
+      // Fix positions in background
+      try {
+        const { fixFlashcardPositions } = await import('./fix-positions');
+        await fixFlashcardPositions(db, userDeckId);
+      } catch (fixError) {
+        console.log('⚠️ Background position fix failed:', fixError);
+      }
+      
+      // Sync from Supabase in background
+      try {
+        const { syncFlashcardsFromSupabase } = await import('./supabase-sync');
+        await syncFlashcardsFromSupabase(userDeckId, db);
+      } catch (syncError) {
+        console.log('⚠️ Background Supabase sync failed:', syncError);
+      }
+    } catch (error) {
+      console.error('❌ Background sync error:', error);
+    }
+  }
+
   async insertCustomFlashcard(flashcard: CustomFlashcard): Promise<void> {
     const db = await this.getDb();
     
@@ -139,21 +169,8 @@ export class FlashcardOperations extends BaseDatabaseService {
         throw new Error('Invalid userDeckId: must be a non-empty string');
       }
       
-      // Fix any invalid positions first
-      try {
-        const { fixFlashcardPositions } = await import('./fix-positions');
-        await fixFlashcardPositions(db, userDeckId);
-      } catch (fixError) {
-        console.log('⚠️ Could not fix positions:', fixError);
-      }
-      
-      // Try to sync from Supabase first (if online and authenticated)
-      try {
-        const { syncFlashcardsFromSupabase } = await import('./supabase-sync');
-        await syncFlashcardsFromSupabase(userDeckId, db);
-      } catch (syncError) {
-        console.log('⚠️ Could not sync from Supabase, using local data:', syncError);
-      }
+      // Note: Position fixing and Supabase sync moved to background operations
+      // for instant loading performance matching template decks
       
       const rows = await db.getAllAsync<any>(`
         SELECT * FROM custom_flashcards 

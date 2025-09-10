@@ -87,6 +87,12 @@ export const useDeckDetailStore = create<DeckDetailState>((set, get) => ({
         .catch(() => {
           // Keep the fallback value
         });
+
+      // For custom decks, start background sync after initial loading
+      if (foundDeck.is_custom) {
+        localDatabase.syncCustomFlashcardsInBackground(deckId)
+          .catch(error => console.log('⚠️ Background sync failed:', error));
+      }
     } catch (error) {
       console.error('Error loading deck data:', error);
       set({ deck: null, flashcards: [], dueToday: null });

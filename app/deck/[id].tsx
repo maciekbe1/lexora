@@ -145,7 +145,7 @@ export default function DeckDetailScreen() {
           }
           ListEmptyComponent={renderEmptyState}
           showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={isDragEnabled ? null : () => <View style={styles.separator} />}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
           scrollEnabled={true}
         />
       )}
@@ -195,12 +195,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   list: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 24,
   },
   emptyList: {
     flexGrow: 1,
   },
   separator: {
-    height: 12,
+    height: 16,
   },
 });
