@@ -35,6 +35,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-secure-store',
     'expo-router',
     'expo-web-browser',
+    'expo-font',
   ],
   experiments: {
     typedRoutes: true,
