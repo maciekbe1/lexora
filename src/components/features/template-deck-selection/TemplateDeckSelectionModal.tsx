@@ -2,7 +2,7 @@ import { SUPPORTED_LANGUAGES, getLanguageName } from "@/constants/languages";
 import { useAuthStore } from "@/store";
 import type { TemplateDeck } from "@/types/flashcard";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,11 +12,12 @@ import {
   View,
 } from "react-native";
 
-import { BaseModal } from "@/components/ui";
+import { Modal } from "@/components/ui/Modal";
 import { useAppTheme } from "@/theme/useAppTheme";
 import { LanguageTab } from "./LanguageTab";
 import { TemplateDeckCard } from "./TemplateDeckCard";
 import { useTemplateDeckSelection } from "./useTemplateDeckSelection";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 
 export interface TemplateDeckSelectionModalProps {
   visible: boolean;
@@ -30,6 +31,7 @@ export function TemplateDeckSelectionModal({
   onDeckAdded,
 }: TemplateDeckSelectionModalProps) {
   const { colors } = useAppTheme();
+  const modalRef = useRef<BottomSheetModal>(null);
   const { user } = useAuthStore();
   const {
     templateDecks,
@@ -41,6 +43,15 @@ export function TemplateDeckSelectionModal({
     addDeckToCollection,
     refreshData,
   } = useTemplateDeckSelection(user?.id);
+
+  // Handle modal visibility
+  React.useEffect(() => {
+    if (visible) {
+      modalRef.current?.present();
+    } else {
+      modalRef.current?.dismiss();
+    }
+  }, [visible]);
 
   // Refresh data when modal becomes visible
   React.useEffect(() => {
@@ -54,11 +65,12 @@ export function TemplateDeckSelectionModal({
   const availableDecks = templateDecks;
 
   return (
-    <BaseModal
-      visible={visible}
-      onClose={onClose}
+    <Modal
+      ref={modalRef}
       title="Wybierz talię do nauki"
-      disableScroll
+      onClose={onClose}
+      scrollable={false}
+      fullHeight
     >
       <View style={styles.modalContainer}>
         <View style={[styles.languageSelector, { borderBottomColor: colors.border }]}>
@@ -101,7 +113,7 @@ export function TemplateDeckSelectionModal({
                           text: "OK",
                           onPress: () => {
                             onDeckAdded();
-                            onClose();
+                            modalRef.current?.dismiss();
                           },
                         },
                       ]
@@ -131,7 +143,7 @@ export function TemplateDeckSelectionModal({
           />
         )}
       </View>
-    </BaseModal>
+    </Modal>
   );
 }
 

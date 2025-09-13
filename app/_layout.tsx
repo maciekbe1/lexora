@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemedContainer } from "@/theme/ThemedContainer";
 import { useUIOverlayStore } from "@/store";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 
 export default function RootLayout() {
   const { user, loading, initialize } = useAuthStore();
@@ -97,51 +98,53 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style={effective === "dark" ? "light" : "dark"} />
-        <ThemedContainer>
-        <EdgeBackGesture>
-          {/** Disable native back-swipe when any overlay is visible (iOS) */}
-          <OverlayBackGestureGuard>
-          <Stack
-            screenOptions={{
-              headerShown: false, // keep custom headers; gestures still enabled
-              gestureEnabled: useUIOverlayStore.getState().overlayCount === 0,
-              fullScreenGestureEnabled:
-                Platform.OS === "ios" && useUIOverlayStore.getState().overlayCount === 0,
-              animation: Platform.OS === "ios" ? "slide_from_right" : "slide_from_right",
-              gestureDirection: "horizontal",
-            }}
-          >
-            <Stack.Screen name="(app)" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="deck/[id]" />
-            <Stack.Screen name="study/[deckId]" />
-          </Stack>
-          </OverlayBackGestureGuard>
-          {showLangPrefs && (
-            <LanguagePreferencesModal
-              visible={showLangPrefs}
-              onClose={() => setShowLangPrefs(false)}
-              initialNative={nativeLanguage}
-              initialTarget={targetLanguage}
-              onSave={async (nativeLang, targetLang) => {
-                if (!user?.id) return false;
-                // Update local store first
-                usePreferencesStore.getState().setNative(nativeLang);
-                usePreferencesStore.getState().setTarget(targetLang);
-                const ok = await saveToServer(user.id);
-                return ok;
+        <BottomSheetModalProvider>
+          <StatusBar style={effective === "dark" ? "light" : "dark"} />
+          <ThemedContainer>
+          <EdgeBackGesture>
+            {/** Disable native back-swipe when any overlay is visible (iOS) */}
+            <OverlayBackGestureGuard>
+            <Stack
+              screenOptions={{
+                headerShown: false, // keep custom headers; gestures still enabled
+                gestureEnabled: useUIOverlayStore.getState().overlayCount === 0,
+                fullScreenGestureEnabled:
+                  Platform.OS === "ios" && useUIOverlayStore.getState().overlayCount === 0,
+                animation: Platform.OS === "ios" ? "slide_from_right" : "slide_from_right",
+                gestureDirection: "horizontal",
               }}
+            >
+              <Stack.Screen name="(app)" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="deck/[id]" />
+              <Stack.Screen name="study/[deckId]" />
+            </Stack>
+            </OverlayBackGestureGuard>
+            {showLangPrefs && (
+              <LanguagePreferencesModal
+                visible={showLangPrefs}
+                onClose={() => setShowLangPrefs(false)}
+                initialNative={nativeLanguage}
+                initialTarget={targetLanguage}
+                onSave={async (nativeLang, targetLang) => {
+                  if (!user?.id) return false;
+                  // Update local store first
+                  usePreferencesStore.getState().setNative(nativeLang);
+                  usePreferencesStore.getState().setTarget(targetLang);
+                  const ok = await saveToServer(user.id);
+                  return ok;
+                }}
+              />
+            )}
+            <Snackbar
+              visible={visible}
+              message={message || ''}
+              type={type}
+              onDismiss={hide}
             />
-          )}
-          <Snackbar
-            visible={visible}
-            message={message || ''}
-            type={type}
-            onDismiss={hide}
-          />
-        </EdgeBackGesture>
-        </ThemedContainer>
+          </EdgeBackGesture>
+          </ThemedContainer>
+        </BottomSheetModalProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

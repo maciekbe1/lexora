@@ -1,7 +1,7 @@
 import { useAuthStore } from "@/store";
 import { useAppTheme } from "@/theme/useAppTheme";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useRef } from "react";
 import {
   Dimensions,
   Image,
@@ -12,8 +12,9 @@ import {
   View,
 } from "react-native";
 
-import { BaseModal } from "@/components/ui";
+import { Modal } from "@/components/ui/Modal";
 import { SkeletonView } from "@/components/ui/Skeleton";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import {
   HistoryChips,
   SearchBar,
@@ -35,6 +36,7 @@ export function ImagePickerComponent({
 }: ImagePickerComponentProps) {
   const { user } = useAuthStore();
   const { colors } = useAppTheme();
+  const modalRef = useRef<BottomSheetModal>(null);
   const {
     modalVisible,
     openModal,
@@ -60,7 +62,16 @@ export function ImagePickerComponent({
   } = useImagePicker(user?.id, onImageSelected);
   const removeImage = () => onImageSelected("");
   const screenWidth = Dimensions.get("window").width;
-  // BaseModal content has 20px horizontal padding on both sides.
+  // Modal content has 20px horizontal padding on both sides.
+
+  // Handle modal visibility
+  React.useEffect(() => {
+    if (modalVisible) {
+      modalRef.current?.present();
+    } else {
+      modalRef.current?.dismiss();
+    }
+  }, [modalVisible]);
   // Grid now uses no extra horizontal padding; reserve a fixed gap between columns.
   const CONTENT_PADDING = 20;
   const COLUMN_GAP = 12;
@@ -110,11 +121,12 @@ export function ImagePickerComponent({
         )}
       </TouchableOpacity>
 
-      <BaseModal
-        visible={modalVisible}
-        onClose={closeModal}
+      <Modal
+        ref={modalRef}
         title="Wybierz zdjęcie"
-        disableScroll={true}
+        onClose={closeModal}
+        scrollable={false}
+        fullHeight
       >
         <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
           <View style={styles.buttonRow}>
@@ -157,7 +169,7 @@ export function ImagePickerComponent({
             hasMore={hasMore}
           />
         </View>
-      </BaseModal>
+      </Modal>
     </>
   );
 }

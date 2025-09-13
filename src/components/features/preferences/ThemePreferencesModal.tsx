@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { BaseModal } from '@/components/ui';
+import { Modal } from '@/components/ui/Modal';
 import { ThemeMode } from '@/store/theme';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
 
 interface Props {
   visible: boolean;
@@ -11,8 +12,18 @@ interface Props {
 }
 
 export function ThemePreferencesModal({ visible, onClose, initialMode = 'system', onSave }: Props) {
+  const modalRef = useRef<BottomSheetModal>(null);
   const [mode, setMode] = useState<ThemeMode>(initialMode);
   const [saving, setSaving] = useState(false);
+
+  // Handle modal visibility
+  React.useEffect(() => {
+    if (visible) {
+      modalRef.current?.present();
+    } else {
+      modalRef.current?.dismiss();
+    }
+  }, [visible]);
 
   useEffect(() => {
     if (visible) setMode(initialMode);
@@ -22,7 +33,7 @@ export function ThemePreferencesModal({ visible, onClose, initialMode = 'system'
     setSaving(true);
     const ok = await onSave(mode);
     setSaving(false);
-    if (ok) onClose();
+    if (ok) modalRef.current?.dismiss();
   };
 
   const Option = ({ value, label }: { value: ThemeMode; label: string }) => (
@@ -35,18 +46,28 @@ export function ThemePreferencesModal({ visible, onClose, initialMode = 'system'
   );
 
   return (
-    <BaseModal
-      visible={visible}
-      onClose={onClose}
+    <Modal
+      ref={modalRef}
       title="Motyw aplikacji"
-      rightButton={{ text: saving ? 'Zapisywanie…' : 'Zapisz', onPress: save, disabled: saving, loading: saving }}
+      onClose={onClose}
+      headerRight={
+        <TouchableOpacity
+          onPress={save}
+          disabled={saving}
+          style={[styles.saveButton, { opacity: saving ? 0.5 : 1 }]}
+        >
+          <Text style={styles.saveButtonText}>
+            {saving ? 'Zapisywanie…' : 'Zapisz'}
+          </Text>
+        </TouchableOpacity>
+      }
     >
       <View style={styles.container}>
         <Option value="system" label="Zgodnie z ustawieniami urządzenia" />
         <Option value="light" label="Jasny" />
         <Option value="dark" label="Ciemny" />
       </View>
-    </BaseModal>
+    </Modal>
   );
 }
 
@@ -66,5 +87,16 @@ const styles = StyleSheet.create({
   },
   optionText: { fontSize: 16, color: '#1a1a1a' },
   optionTextActive: { color: '#007AFF', fontWeight: '600' },
+  saveButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
 

@@ -1,13 +1,14 @@
 import type { CustomFlashcard, UserDeck } from "@/types/flashcard";
-import React from "react";
+import React, { useRef } from "react";
 import { Alert, StyleSheet, Text, TextInput, View, TouchableOpacity } from "react-native";
 import { useAppTheme } from "@/theme/useAppTheme";
 
 import { DeckSelector } from "@/components/features/deck";
 import { ImagePickerComponent } from "@/components/features/image-picker";
-import { BaseModal } from "@/components/ui";
+import { Modal } from "@/components/ui/Modal";
 import { getLanguageFlag, SUPPORTED_LANGUAGES } from "@/constants/languages";
 import { useCustomFlashcardForm, UseCustomFlashcardFormParams } from "@/hooks";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 
 interface CustomFlashcardModalProps {
   visible: boolean;
@@ -31,11 +32,21 @@ export function CustomFlashcardModal({
   onDeleteFlashcard,
 }: CustomFlashcardModalProps) {
   const { colors } = useAppTheme();
+  const modalRef = useRef<BottomSheetModal>(null);
   const params: UseCustomFlashcardFormParams = {
     visible,
     userDecks,
     onCreateFlashcard,
   };
+
+  // Handle modal visibility
+  React.useEffect(() => {
+    if (visible) {
+      modalRef.current?.present();
+    } else {
+      modalRef.current?.dismiss();
+    }
+  }, [visible]);
   if (preselectedDeckId !== undefined)
     params.preselectedDeckId = preselectedDeckId;
   if (editingFlashcard !== undefined)
@@ -64,22 +75,27 @@ export function CustomFlashcardModal({
 
   const [showLangPicker, setShowLangPicker] = React.useState(false);
 
+  const handleCreateAndClose = async () => {
+    const ok = await handleCreate();
+    if (ok) modalRef.current?.dismiss();
+  };
+
   return (
-    <BaseModal
-      visible={visible}
-      onClose={onClose}
+    <Modal
+      ref={modalRef}
       title={editingFlashcard ? "Edytuj fiszkę" : "Nowa fiszka"}
-      requireScrollTopForSwipe
-      disableTopGestureZone
-      rightButton={{
-        text: editingFlashcard ? "Zapisz" : "Stwórz",
-        onPress: async () => {
-          const ok = await handleCreate();
-          if (ok) onClose();
-        },
-        disabled: isLoading || !selectedDeck,
-        loading: isLoading,
-      }}
+      onClose={onClose}
+      headerRight={
+        <TouchableOpacity
+          onPress={handleCreateAndClose}
+          disabled={isLoading || !selectedDeck}
+          style={[styles.saveButton, { opacity: isLoading || !selectedDeck ? 0.5 : 1 }]}
+        >
+          <Text style={styles.saveButtonText}>
+            {editingFlashcard ? "Zapisz" : "Stwórz"}
+          </Text>
+        </TouchableOpacity>
+      }
     >
       <DeckSelector
         customDecks={customDecks}
@@ -230,7 +246,7 @@ export function CustomFlashcardModal({
           ) : null}
         </>
       )}
-    </BaseModal>
+    </Modal>
   );
 }
 
@@ -329,5 +345,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FF3B30",
     borderRadius: 8,
+  },
+  saveButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#007AFF",
+    borderRadius: 8,
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

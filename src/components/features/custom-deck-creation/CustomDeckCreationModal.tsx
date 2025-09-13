@@ -1,10 +1,11 @@
 import { ImagePickerComponent } from "@/components/features/image-picker";
-import { BaseModal } from "@/components/ui";
+import { Modal } from "@/components/ui/Modal";
 import { SUPPORTED_LANGUAGES } from "@/constants/languages";
 import type { CustomDeck } from "@/types/flashcard";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useAppTheme } from "@/theme/useAppTheme";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 
 interface CustomDeckCreationModalProps {
   visible: boolean;
@@ -20,12 +21,22 @@ export function CustomDeckCreationModal({
   onCreateDeck,
 }: CustomDeckCreationModalProps) {
   const { colors } = useAppTheme();
+  const modalRef = useRef<BottomSheetModal>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState<string>("en");
   const [coverImageUrl, setCoverImageUrl] = useState<string>("");
   const [tags, setTags] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Handle modal visibility
+  React.useEffect(() => {
+    if (visible) {
+      modalRef.current?.present();
+    } else {
+      modalRef.current?.dismiss();
+    }
+  }, [visible]);
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -58,7 +69,7 @@ export function CustomDeckCreationModal({
       setSelectedLanguage("en");
       setCoverImageUrl("");
       setTags("");
-      onClose();
+      modalRef.current?.dismiss();
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       Alert.alert("Błąd", "Nie udało się stworzyć talii");
@@ -102,74 +113,76 @@ export function CustomDeckCreationModal({
   );
 
   return (
-    <BaseModal
-      visible={visible}
-      onClose={onClose}
+    <Modal
+      ref={modalRef}
       title="Nowa talia"
-      rightButton={{
-        text: isLoading ? "Tworzenie..." : "Stwórz",
-        onPress: handleCreate,
-        disabled: isLoading,
-        loading: isLoading,
-      }}
+      onClose={onClose}
+      headerRight={
+        <TouchableOpacity
+          onPress={handleCreate}
+          disabled={isLoading}
+          style={[styles.createButton, { opacity: isLoading ? 0.5 : 1 }]}
+        >
+          <Text style={styles.createButtonText}>
+            {isLoading ? "Tworzenie..." : "Stwórz"}
+          </Text>
+        </TouchableOpacity>
+      }
     >
-      <View style={[styles.container, { backgroundColor: colors.surface }]}>
-        <View style={styles.formGroup}>
-          <Text style={[styles.label, { color: colors.text }]}>Nazwa talii *</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-            value={name}
-            onChangeText={setName}
-            placeholder="np. Moje słówka hiszpańskie"
-            placeholderTextColor={colors.mutedText}
-            maxLength={100}
-          />
-        </View>
-
-        <View style={styles.formGroup}>
-          <Text style={[styles.label, { color: colors.text }]}>Opis (opcjonalnie)</Text>
-          <TextInput
-            style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Krótki opis talii..."
-            placeholderTextColor={colors.mutedText}
-            multiline
-            numberOfLines={3}
-            maxLength={250}
-          />
-        </View>
-
-        {renderLanguageSelector()}
-
-        <View style={styles.formGroup}>
-          <Text style={[styles.label, { color: colors.text }]}>Zdjęcie okładki (opcjonalnie)</Text>
-          <ImagePickerComponent
-            imageUrl={coverImageUrl}
-            onImageSelected={setCoverImageUrl}
-            placeholder="Dodaj zdjęcie okładki"
-          />
-        </View>
-
-        <View style={styles.formGroup}>
-          <Text style={[styles.label, { color: colors.text }]}>Tagi (opcjonalnie)</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-            value={tags}
-            onChangeText={setTags}
-            placeholder="np. podstawy, słówka, gramatyka"
-            placeholderTextColor={colors.mutedText}
-            maxLength={200}
-          />
-          <Text style={styles.helper}>Oddziel tagi przecinkami</Text>
-        </View>
+      <View style={styles.formGroup}>
+        <Text style={[styles.label, { color: colors.text }]}>Nazwa talii *</Text>
+        <TextInput
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+          value={name}
+          onChangeText={setName}
+          placeholder="np. Moje słówka hiszpańskie"
+          placeholderTextColor={colors.mutedText}
+          maxLength={100}
+        />
       </View>
-    </BaseModal>
+
+      <View style={styles.formGroup}>
+        <Text style={[styles.label, { color: colors.text }]}>Opis (opcjonalnie)</Text>
+        <TextInput
+          style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Krótki opis talii..."
+          placeholderTextColor={colors.mutedText}
+          multiline
+          numberOfLines={3}
+          maxLength={250}
+        />
+      </View>
+
+      {renderLanguageSelector()}
+
+      <View style={styles.formGroup}>
+        <Text style={[styles.label, { color: colors.text }]}>Zdjęcie okładki (opcjonalnie)</Text>
+        <ImagePickerComponent
+          imageUrl={coverImageUrl}
+          onImageSelected={setCoverImageUrl}
+          placeholder="Dodaj zdjęcie okładki"
+        />
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={[styles.label, { color: colors.text }]}>Tagi (opcjonalnie)</Text>
+        <TextInput
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+          value={tags}
+          onChangeText={setTags}
+          placeholder="np. podstawy, słówka, gramatyka"
+          placeholderTextColor={colors.mutedText}
+          maxLength={200}
+        />
+        <Text style={styles.helper}>Oddziel tagi przecinkami</Text>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   formGroup: {
     marginBottom: 24,
   },
@@ -225,5 +238,16 @@ const styles = StyleSheet.create({
   languageNameSelected: {
     color: "#fff",
     fontWeight: "500",
+  },
+  createButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#007AFF",
+    borderRadius: 8,
+  },
+  createButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

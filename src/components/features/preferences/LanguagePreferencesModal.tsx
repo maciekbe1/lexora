@@ -1,10 +1,10 @@
-import { BaseModal } from "@/components/ui";
+import { Modal } from "@/components/ui/Modal";
 import {
   SUPPORTED_LANGUAGES,
   getLanguageFlag,
   getLanguageName,
 } from "@/constants/languages";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Alert,
   ScrollView,
@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 
 interface Props {
   visible: boolean;
@@ -32,9 +33,19 @@ export function LanguagePreferencesModal({
   initialTarget,
   onSave,
 }: Props) {
+  const modalRef = useRef<BottomSheetModal>(null);
   const [nativeLang, setNativeLang] = useState<string>(initialNative || "pl");
   const [targetLang, setTargetLang] = useState<string>(initialTarget || "en");
   const [saving, setSaving] = useState(false);
+
+  // Handle modal visibility
+  React.useEffect(() => {
+    if (visible) {
+      modalRef.current?.present();
+    } else {
+      modalRef.current?.dismiss();
+    }
+  }, [visible]);
 
   const save = async () => {
     if (!nativeLang || !targetLang) return;
@@ -44,7 +55,7 @@ export function LanguagePreferencesModal({
     setSaving(true);
     const ok = await onSave(nativeLang, targetLang);
     setSaving(false);
-    if (ok) onClose();
+    if (ok) modalRef.current?.dismiss();
   };
 
   // Sync local state with incoming props when the modal is opened or values change
@@ -56,16 +67,21 @@ export function LanguagePreferencesModal({
   }, [visible, initialNative, initialTarget]);
 
   return (
-    <BaseModal
-      visible={visible}
-      onClose={onClose}
+    <Modal
+      ref={modalRef}
       title="Twoje języki"
-      rightButton={{
-        text: saving ? "Zapisywanie…" : "Zapisz",
-        onPress: save,
-        disabled: saving,
-        loading: saving,
-      }}
+      onClose={onClose}
+      headerRight={
+        <TouchableOpacity
+          onPress={save}
+          disabled={saving}
+          style={[styles.saveButton, { opacity: saving ? 0.5 : 1 }]}
+        >
+          <Text style={styles.saveButtonText}>
+            {saving ? "Zapisywanie…" : "Zapisz"}
+          </Text>
+        </TouchableOpacity>
+      }
     >
       <View style={styles.section}>
         <Text style={styles.label}>Język ojczysty</Text>
@@ -116,7 +132,7 @@ export function LanguagePreferencesModal({
           ))}
         </ScrollView>
       </View>
-    </BaseModal>
+    </Modal>
   );
 }
 
@@ -138,4 +154,15 @@ const styles = StyleSheet.create({
   },
   langChipText: { fontSize: 14, color: "#333" },
   langChipTextActive: { color: "#fff", fontWeight: "600" },
+  saveButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#007AFF",
+    borderRadius: 8,
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });

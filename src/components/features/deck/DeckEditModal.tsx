@@ -1,8 +1,9 @@
 import { ImagePickerComponent } from "@/components/features/image-picker";
-import { BaseModal } from "@/components/ui";
+import { Modal } from "@/components/ui/Modal";
 import type { UserDeck } from "@/types/flashcard";
-import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useEffect, useState, useRef } from "react";
+import { Alert, StyleSheet, Text, TextInput, View, TouchableOpacity } from "react-native";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 
 interface DeckEditModalProps {
   visible: boolean;
@@ -22,11 +23,21 @@ export function DeckEditModal({
   onSave,
   deck,
 }: DeckEditModalProps) {
+  const modalRef = useRef<BottomSheetModal>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [language, setLanguage] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Handle modal visibility
+  React.useEffect(() => {
+    if (visible) {
+      modalRef.current?.present();
+    } else {
+      modalRef.current?.dismiss();
+    }
+  }, [visible]);
 
   // Initialize form with deck data
   useEffect(() => {
@@ -53,7 +64,7 @@ export function DeckEditModal({
         coverImageUrl: coverImageUrl || "",
       });
 
-      onClose();
+      modalRef.current?.dismiss();
     } catch (error) {
       Alert.alert("Błąd", "Nie udało się zapisać zmian");
       console.error("Save deck error:", error);
@@ -63,16 +74,21 @@ export function DeckEditModal({
   };
 
   return (
-    <BaseModal
-      visible={visible}
-      onClose={onClose}
+    <Modal
+      ref={modalRef}
       title="Edytuj talię"
-      rightButton={{
-        text: "Zapisz",
-        onPress: handleSave,
-        disabled: isLoading,
-        loading: isLoading,
-      }}
+      onClose={onClose}
+      headerRight={
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={isLoading}
+          style={[styles.saveButton, { opacity: isLoading ? 0.5 : 1 }]}
+        >
+          <Text style={styles.saveButtonText}>
+            Zapisz
+          </Text>
+        </TouchableOpacity>
+      }
     >
       <View style={styles.formGroup}>
         <Text style={styles.label}>Nazwa talii *</Text>
@@ -129,7 +145,7 @@ export function DeckEditModal({
           placeholder="Dodaj okładkę do talii"
         />
       </View>
-    </BaseModal>
+    </Modal>
   );
 }
 
@@ -160,5 +176,16 @@ const styles = StyleSheet.create({
     color: "#666",
     textAlign: "right",
     marginTop: 4,
+  },
+  saveButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#007AFF",
+    borderRadius: 8,
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
