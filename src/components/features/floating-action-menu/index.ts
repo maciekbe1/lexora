@@ -1,2 +1,2 @@
-export { FloatingActionMenu } from './FloatingActionMenu';
+export { default as FloatingActionMenu } from './FloatingActionMenu';
 

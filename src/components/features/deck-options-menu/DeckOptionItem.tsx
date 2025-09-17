@@ -3,21 +3,21 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-type Props = {
+interface DeckOptionItemProps {
   icon: string;
   iconColor?: string;
   title: string;
   subtitle?: string;
   onPress: () => void;
-};
+}
 
-export function OptionItem({
+export function DeckOptionItem({
   icon,
   iconColor,
   title,
   subtitle,
   onPress,
-}: Props) {
+}: DeckOptionItemProps) {
   const { colors } = useAppTheme();
   return (
     <TouchableOpacity

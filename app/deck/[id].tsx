@@ -4,7 +4,7 @@ import {
   DeckHeader,
   DeckInfo,
 } from "@/components/features/deck";
-import { DeckOptionsMenu } from "@/components/features/deck-options-menu";
+import DeckOptionsMenu from "@/components/features/deck-options-menu/DeckOptionsMenu";
 import {
   EmptyFlashcardsState,
   FlashcardItem,

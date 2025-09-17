@@ -6,4 +6,3 @@ export * from "./DragHandle";
 export * from "./Snackbar";
 export * from "./Skeleton";
 export * from "./Modal";
-export * from "./OptionsMenu";
