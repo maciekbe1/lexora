@@ -1,5 +1,4 @@
 import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { DeckOptionItem } from './DeckOptionItem';
@@ -127,24 +126,16 @@ export default function DeckOptionsMenu(props: DeckOptionsMenuProps) {
       snapPoints={snapPoints}
       scrollable={false}
     >
-      <View style={styles.container}>
-        {options.map((option, index) => (
-          <DeckOptionItem
+      {options.map((option, index) => (
+        <DeckOptionItem
             key={index}
             icon={option.icon}
             {...(option.iconColor && { iconColor: option.iconColor })}
             title={option.title}
             {...(option.subtitle && { subtitle: option.subtitle })}
             onPress={() => handleOptionPress(option.onPress)}
-          />
-        ))}
-      </View>
+        />
+      ))}
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    paddingBottom: 8,
-  },
-});

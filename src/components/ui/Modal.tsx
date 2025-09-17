@@ -21,7 +21,6 @@ export interface ModalProps extends Partial<BottomSheetModalProps> {
   onClose?: () => void;
   headerRight?: ReactNode;
   fullHeight?: boolean;
-  contentPadding?: boolean;
 }
 
 export const Modal = forwardRef<BottomSheetModal, ModalProps>(
@@ -36,7 +35,6 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
       onClose,
       headerRight,
       fullHeight = false,
-      contentPadding = true,
       ...bottomSheetProps
     },
     ref
@@ -122,8 +120,8 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
 
         <ContentWrapper
           contentContainerStyle={[
-            contentPadding && styles.contentContainer,
-            { paddingBottom: insets.bottom + (contentPadding ? 20 : 0) },
+            styles.contentContainer,
+            { paddingBottom: insets.bottom + 20 },
           ]}
           showsVerticalScrollIndicator={false}
         >
