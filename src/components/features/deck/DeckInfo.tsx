@@ -1,114 +1,120 @@
-import { useAppTheme } from "@/theme/useAppTheme";
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import { useAppTheme } from "@/theme/useAppTheme";
+import type { UserDeck } from "@/types/flashcard";
+import { t } from "@/locales/i18n";
+import { Ionicons } from "@expo/vector-icons";
 
 interface DeckInfoProps {
-  deckDescription: string;
-  deckLanguage?: string | undefined;
+  deck: UserDeck;
   flashcardCount: number;
-  onStartStudy: () => void;
   dueToday?: number | null;
-  stats?: { new: number; learning: number; mastered: number };
+  onStartStudy: () => void;
 }
 
-export function DeckInfo({
-  deckDescription,
-  deckLanguage,
-  onStartStudy,
-  stats,
-}: DeckInfoProps) {
+export function DeckInfo({ deck, flashcardCount, dueToday, onStartStudy }: DeckInfoProps) {
   const { colors } = useAppTheme();
+
+  const hasCardsToStudy = flashcardCount > 0;
+  const hasDueCards = (dueToday ?? 0) > 0;
+
   return (
-    <>
-      {/* Deck Info */}
-      <View style={[styles.deckInfo, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.deckDescription, { color: colors.text }]}>
-          {deckDescription}
-        </Text>
-        {deckLanguage && (
-          <Text style={[styles.deckLanguage, { color: colors.mutedText }]}>
-            Język: {deckLanguage}
+    <View style={styles.container}>
+      {/* Statistics */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: colors.text }]}>
+            {flashcardCount}
           </Text>
-        )}
-        {stats && (
-          <View style={[styles.statsRow, { borderTopColor: colors.border }]}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: "#34C759" }]}>
-                {stats.new}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.mutedText }]}>
-                Nowe
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: "#FF9500" }]}>
-                {stats.learning}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.mutedText }]}>
-                Uczę się
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: "#007AFF" }]}>
-                {stats.mastered}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.mutedText }]}>
-                Opanowane
-              </Text>
-            </View>
-          </View>
-        )}
+          <Text style={[styles.statLabel, { color: colors.mutedText }]}>
+            {t("deck.cards")}
+          </Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: colors.text }]}>
+            {dueToday ?? 0}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.mutedText }]}>
+            {t("deck.dueToday")}
+          </Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: colors.text }]}>
+            {deck.stats_mastered || 0}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.mutedText }]}>
+            {t("deck.mastered")}
+          </Text>
+        </View>
       </View>
 
       {/* Study Button */}
       <TouchableOpacity
-        style={[styles.studyButton, { backgroundColor: colors.primary }]}
+        style={[
+          styles.studyButton,
+          {
+            backgroundColor: hasCardsToStudy ? colors.primary : colors.mutedText,
+            opacity: hasCardsToStudy ? 1 : 0.5
+          }
+        ]}
         onPress={onStartStudy}
+        disabled={!hasCardsToStudy}
       >
-        <Ionicons name="play" size={20} color="#fff" />
-        <Text style={styles.studyButtonText}>Rozpocznij naukę</Text>
+        <Ionicons
+          name="play"
+          size={24}
+          color="white"
+          style={styles.studyIcon}
+        />
+        <Text style={styles.studyButtonText}>
+          {hasDueCards
+            ? t("deck.studyNow", { count: dueToday })
+            : hasCardsToStudy
+              ? t("deck.startStudy")
+              : t("deck.noCards")
+          }
+        </Text>
       </TouchableOpacity>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  deckInfo: {
-    padding: 16,
-    marginBottom: 8,
+  container: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
   },
-  deckDescription: {
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  deckLanguage: {
-    fontSize: 14,
-    marginTop: 8,
-  },
-  statsRow: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
+  statsContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
+    marginBottom: 20,
   },
-  statItem: { alignItems: "center" },
-  statNumber: { fontSize: 16, fontWeight: "700" },
-  statLabel: { fontSize: 11, marginTop: 2 },
+  statItem: {
+    alignItems: "center",
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+  },
   studyButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 16,
-    marginTop: 6,
     paddingVertical: 14,
-    borderRadius: 8,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginHorizontal: 16,
+  },
+  studyIcon: {
+    marginRight: 8,
   },
   studyButtonText: {
-    color: "#fff",
-    fontSize: 18,
+    color: "white",
+    fontSize: 16,
     fontWeight: "600",
-    marginLeft: 8,
   },
 });

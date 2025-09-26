@@ -1,6 +1,6 @@
 import type { CustomFlashcard } from '@/types/flashcard';
-import { BaseDatabaseService } from './base';
 import { z } from 'zod';
+import { BaseDatabaseService } from './base';
 
 // Validation schemas
 const CustomFlashcardSchema = z.object({
@@ -43,13 +43,7 @@ export class FlashcardOperations extends BaseDatabaseService {
     try {
       console.log(`🔄 Background sync for deck ${userDeckId}...`);
       
-      // Fix positions in background
-      try {
-        const { fixFlashcardPositions } = await import('./fix-positions');
-        await fixFlashcardPositions(db, userDeckId);
-      } catch (fixError) {
-        console.log('⚠️ Background position fix failed:', fixError);
-      }
+      // Position fixing removed - file no longer exists
       
       // Sync from Supabase in background
       try {

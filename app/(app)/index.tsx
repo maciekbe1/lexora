@@ -76,9 +76,7 @@ export default function DashboardScreen() {
                 progressBackgroundColor="#ffffff"
               />
             }
-            ListEmptyComponent={
-              <EmptyDeckState onBrowseTemplates={modalHandlers.template.show} />
-            }
+            ListEmptyComponent={<EmptyDeckState />}
             showsVerticalScrollIndicator={false}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
           />

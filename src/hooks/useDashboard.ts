@@ -72,17 +72,17 @@ export function useDashboard() {
 
   // FAB action handlers
   const handleFABPress = () => setShowActionMenu(true);
-  
+
   const handleCreateDeck = () => {
     setShowActionMenu(false);
     setShowCustomDeckModal(true);
   };
-  
+
   const handleCreateFlashcard = () => {
     setShowActionMenu(false);
     setShowCustomFlashcardModal(true);
   };
-  
+
   const handleBrowseTemplates = () => {
     setShowActionMenu(false);
     setShowTemplateModal(true);

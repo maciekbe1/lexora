@@ -1,106 +1,61 @@
-import type { CustomFlashcard } from "@/types/flashcard";
 import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useAppTheme } from "@/theme/useAppTheme";
+import type { CustomFlashcard, TemplateFlashcard } from "@/types/flashcard";
 
 interface FlashcardItemProps {
-  flashcard: CustomFlashcard;
-  index: number;
-  onEdit: (flashcard: CustomFlashcard) => void;
+  flashcard: CustomFlashcard | TemplateFlashcard;
+  onPress: () => void;
+  onLongPress?: () => void;
 }
 
-export function FlashcardItem({ flashcard, index, onEdit }: FlashcardItemProps) {
+export function FlashcardItem({
+  flashcard,
+  onPress,
+  onLongPress,
+}: FlashcardItemProps) {
   const { colors } = useAppTheme();
+
   return (
     <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={() => onEdit(flashcard)}
-      style={[styles.flashcardItem, { backgroundColor: colors.surface }]}
+      style={[styles.container, { backgroundColor: colors.surface }]}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      activeOpacity={0.7}
     >
-      <View style={styles.flashcardHeader}>
-        <Text style={[styles.flashcardNumber, { color: colors.primary }]}>#{index + 1}</Text>
-      </View>
-
-      <View style={styles.flashcardContent}>
-        <View style={styles.cardSide}>
-          <Text style={[styles.sideLabel, { color: colors.mutedText }]}>Przód:</Text>
-          {flashcard.front_image_url ? (
-            <Image
-              source={{ uri: flashcard.front_image_url }}
-              style={styles.cardImage}
-            />
-          ) : null}
-          <Text style={[styles.cardText, { color: colors.text }]}>{flashcard.front_text}</Text>
-        </View>
-
-        <View style={styles.cardSide}>
-          <Text style={[styles.sideLabel, { color: colors.mutedText }]}>Tył:</Text>
-          {flashcard.back_image_url ? (
-            <Image
-              source={{ uri: flashcard.back_image_url }}
-              style={styles.cardImage}
-            />
-          ) : null}
-          <Text style={[styles.cardText, { color: colors.text }]}>{flashcard.back_text}</Text>
-        </View>
-
-        {flashcard.hint_text ? (
-          <View style={styles.cardSide}>
-            <Text style={[styles.sideLabel, { color: colors.mutedText }]}>Podpowiedź:</Text>
-            <Text style={[styles.hintText, { color: colors.mutedText }]}>{flashcard.hint_text}</Text>
-          </View>
-        ) : null}
+      <View style={styles.content}>
+        <Text style={[styles.frontText, { color: colors.text }]} numberOfLines={2}>
+          {flashcard.front_text}
+        </Text>
+        <Text style={[styles.backText, { color: colors.mutedText }]} numberOfLines={1}>
+          {flashcard.back_text}
+        </Text>
       </View>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  flashcardItem: {
+  container: {
+    marginHorizontal: 16,
+    marginVertical: 6,
     borderRadius: 12,
-    padding: 18,
+    padding: 16,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  flashcardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
+  content: {
+    flex: 1,
   },
-  flashcardNumber: {
+  frontText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "500",
+    marginBottom: 8,
   },
-  // Removed separate action buttons; whole card is tappable
-  flashcardContent: {
-    gap: 18,
-  },
-  cardSide: {
-    gap: 10,
-  },
-  sideLabel: {
+  backText: {
     fontSize: 14,
-    fontWeight: "600",
-  },
-  cardText: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  cardImage: {
-    width: "100%",
-    height: 140,
-    borderRadius: 8,
-    resizeMode: "cover",
-  },
-  hintText: {
-    fontSize: 14,
-    fontStyle: "italic",
   },
 });

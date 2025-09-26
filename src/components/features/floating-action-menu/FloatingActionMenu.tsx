@@ -1,7 +1,11 @@
-import React, { useRef, useEffect } from 'react';
-import { Modal } from '@/components/ui/Modal';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { DeckOptionItem } from '@/components/features/deck-options-menu';
+import { DeckOptionItem } from "@/components/features/deck-options-menu";
+import { MODAL_CONFIG } from "@/constants/modalConfig";
+// import { useAppTheme } from "@/theme/useAppTheme";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
+import React, { useEffect, useRef } from "react";
+import { StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Modal } from "@/components/ui/Modal";
 
 interface FloatingActionMenuProps {
   visible: boolean;
@@ -19,33 +23,34 @@ interface ActionOptionConfig {
   onPress: () => void;
 }
 
-const MODAL_HEIGHT_PERCENT = 0.7;
-const MODAL_TITLE = 'Szybkie akcje';
+const MODAL_TITLE = "Szybkie akcje";
+
+console.log("MODAL_TITLE:", MODAL_TITLE);
 
 // Icon constants following Clean Code principles
 const ICONS = {
-  LIBRARY: 'library',
-  CARD: 'card',
-  SEARCH: 'search',
+  LIBRARY: "library",
+  CARD: "card",
+  SEARCH: "search",
 } as const;
 
 // Color constants for consistent theming
 const ICON_COLORS = {
-  CREATE_FLASHCARD: '#34C759',
-  BROWSE_TEMPLATES: '#FF9500',
+  CREATE_FLASHCARD: "#34C759",
+  BROWSE_TEMPLATES: "#FF9500",
 } as const;
 
 // Text constants - no magic strings
 const ACTION_TITLES = {
-  CREATE_DECK: 'Utwórz talię',
-  ADD_FLASHCARD: 'Dodaj fiszkę',
-  BROWSE_TEMPLATES: 'Przeglądaj talie',
+  CREATE_DECK: "Utwórz talię",
+  ADD_FLASHCARD: "Dodaj fiszkę",
+  BROWSE_TEMPLATES: "Przeglądaj talie",
 } as const;
 
 const ACTION_SUBTITLES = {
-  CREATE_DECK: 'Stwórz własną kolekcję fiszek',
-  ADD_FLASHCARD: 'Dodaj fiszkę do istniejącej talii',
-  BROWSE_TEMPLATES: 'Wybierz z gotowych kolekcji',
+  CREATE_DECK: "Stwórz własną kolekcję fiszek",
+  ADD_FLASHCARD: "Dodaj fiszkę do istniejącej talii",
+  BROWSE_TEMPLATES: "Wybierz z gotowych kolekcji",
 } as const;
 
 export default function FloatingActionMenu(props: FloatingActionMenuProps) {
@@ -57,12 +62,17 @@ export default function FloatingActionMenu(props: FloatingActionMenuProps) {
     onBrowseTemplates,
   } = props;
 
+  // const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const modalRef = useRef<BottomSheetModal>(null);
 
   useEffect(() => {
+    console.log("FloatingActionMenu useEffect - visible:", visible);
     if (visible) {
+      console.log("Calling modalRef.current?.present()");
       modalRef.current?.present();
     } else {
+      console.log("Calling modalRef.current?.dismiss()");
       modalRef.current?.dismiss();
     }
   }, [visible]);
@@ -92,7 +102,6 @@ export default function FloatingActionMenu(props: FloatingActionMenuProps) {
 
   const handleOptionPress = (onPress: () => void): void => {
     onPress();
-    onClose();
   };
 
   const getMenuOptions = (): ActionOptionConfig[] => [
@@ -101,27 +110,48 @@ export default function FloatingActionMenu(props: FloatingActionMenuProps) {
     browseTemplatesOption(),
   ];
 
-  const snapPoints = [`${Math.round(MODAL_HEIGHT_PERCENT * 100)}%`];
   const options = getMenuOptions();
+
+  // Header handled by shared Modal
+
+  const renderContent = () => (
+    <View
+      style={[
+        styles.content,
+        { paddingBottom: insets.bottom + MODAL_CONFIG.PADDING.BOTTOM_SAFE },
+      ]}
+    >
+      {options.map((option, index) => (
+        <DeckOptionItem
+          key={index}
+          icon={option.icon}
+          {...(option.iconColor && { iconColor: option.iconColor })}
+          title={option.title}
+          subtitle={option.subtitle}
+          onPress={() => handleOptionPress(option.onPress)}
+        />
+      ))}
+    </View>
+  );
 
   return (
     <Modal
       ref={modalRef}
       title={MODAL_TITLE}
       onClose={onClose}
-      snapPoints={snapPoints}
-      scrollable={false}
     >
-      {options.map((option, index) => (
-        <DeckOptionItem
-            key={index}
-            icon={option.icon}
-            {...(option.iconColor && { iconColor: option.iconColor })}
-            title={option.title}
-            subtitle={option.subtitle}
-            onPress={() => handleOptionPress(option.onPress)}
-        />
-      ))}
+      {renderContent()}
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {},
+  headerLeft: {},
+  headerRight: {},
+  title: {},
+  content: {
+    paddingHorizontal: MODAL_CONFIG.PADDING.HORIZONTAL,
+    paddingTop: MODAL_CONFIG.PADDING.VERTICAL,
+  },
+});

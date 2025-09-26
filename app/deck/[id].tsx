@@ -4,28 +4,24 @@ import {
   DeckHeader,
   DeckInfo,
 } from "@/components/features/deck";
+import { DeckStatistics } from "@/components/features/deck/DeckStatistics";
 import DeckOptionsMenu from "@/components/features/deck-options-menu/DeckOptionsMenu";
-import {
-  EmptyFlashcardsState,
-  FlashcardItem,
-  ReorderModeList,
-} from "@/components/features/flashcards";
 import { useDeckDetail } from "@/hooks/useDeckDetail";
-import type { CustomFlashcard } from "@/types/flashcard";
-import React from "react";
-import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import React, { useLayoutEffect } from "react";
+import { StyleSheet, View } from "react-native";
 import { useAppTheme } from "@/theme/useAppTheme";
 import { useDisableBackGestureWhileOverlay } from "@/hooks/useDisableBackGestureWhileOverlay";
+import { useNavigation } from "@react-navigation/native";
+import { IconButton } from "@/components/ui/core";
 
 export default function DeckDetailScreen() {
   const { colors } = useAppTheme();
+  const navigation = useNavigation();
   useDisableBackGestureWhileOverlay();
   const {
     deck,
     flashcards,
     deckName,
-    deckDescription,
-    refreshing,
     showLoading,
     isDeleting,
     showAddFlashcardModal,
@@ -34,10 +30,6 @@ export default function DeckDetailScreen() {
     editingFlashcard,
     dueToday,
     isReorderMode,
-    isSyncing,
-    syncError,
-    onRefresh,
-    handleEditFlashcard,
     handleAddFlashcard,
     handleEditDeck,
     handleDeleteFlashcard,
@@ -46,39 +38,47 @@ export default function DeckDetailScreen() {
     handleToggleOptionsMenu,
     handleFlashcardSubmit,
     handleUpdateDeck,
-    handleReorderFlashcards,
     handleToggleReorderMode,
     modalHandlers,
   } = useDeckDetail();
 
-  // Check if drag is enabled for custom decks only
-  const isDragEnabled = deck?.is_custom || false;
+  // Configure navigation header
+  useLayoutEffect(() => {
+    if (!deck) return;
+
+    navigation.setOptions({
+      title: isReorderMode ? "Układaj fiszki" : deckName,
+      headerRight: () => (
+        <View style={styles.headerActions}>
+          {deck.is_custom && (
+            <IconButton
+              icon="create-outline"
+              variant="glass"
+              size="medium"
+              onPress={handleEditDeck}
+            />
+          )}
+          <IconButton
+            icon="ellipsis-vertical"
+            variant="glass"
+            size="medium"
+            onPress={handleToggleOptionsMenu}
+          />
+        </View>
+      ),
+    });
+  }, [
+    navigation,
+    deck,
+    deckName,
+    isReorderMode,
+    handleAddFlashcard,
+    handleToggleOptionsMenu,
+    handleToggleReorderMode,
+    colors.primary,
+  ]);
 
 
-  // Render flashcard item
-  const renderFlashcardItem = ({
-    item,
-    index,
-  }: {
-    item: CustomFlashcard;
-    index: number;
-  }) => {
-    return (
-      <FlashcardItem 
-        flashcard={item} 
-        index={index} 
-        onEdit={deck?.is_custom ? handleEditFlashcard : (() => {})} 
-      />
-    );
-  };
-
-  // Render empty state using the EmptyFlashcardsState component
-  const renderEmptyState = () => (
-    <EmptyFlashcardsState
-      isCustomDeck={deck?.is_custom || false}
-      onAddFlashcard={modalHandlers.flashcard.show}
-    />
-  );
 
   if (showLoading) {
     // Show empty state with proper background - no skeletons to prevent flash  
@@ -97,58 +97,24 @@ export default function DeckDetailScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <DeckHeader
-        deckName={deckName}
-        flashcardCount={flashcards.length}
-        isCustomDeck={deck.is_custom || false}
-        onAddFlashcard={handleAddFlashcard}
-        onToggleOptions={handleToggleOptionsMenu}
-        isReorderMode={isReorderMode}
-        onExitReorderMode={handleToggleReorderMode}
-      />
+      <DeckHeader deck={deck} />
 
       {/* Deck Info and Study Button - Hidden in reorder mode */}
       {!isReorderMode && (
         <DeckInfo
-          deckDescription={deckDescription}
-          deckLanguage={deck.deck_language || undefined}
+          deck={deck}
           flashcardCount={flashcards.length}
           dueToday={dueToday}
-          stats={{
-            new: deck.stats_new ?? 0,
-            learning: deck.stats_learning ?? 0,
-            mastered: deck.stats_mastered ?? 0,
-          }}
           onStartStudy={handleStartStudy}
         />
       )}
 
-      {/* Flashcards List */}
-      {isReorderMode && isDragEnabled ? (
-        <ReorderModeList
-          flashcards={flashcards}
-          onReorder={handleReorderFlashcards}
-          isSyncing={isSyncing}
-          syncError={syncError}
-        />
-      ) : (
-        <FlatList
-          data={flashcards}
-          renderItem={renderFlashcardItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={[
-            styles.list,
-            flashcards.length === 0 && styles.emptyList,
-          ]}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          ListEmptyComponent={renderEmptyState}
-          showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          scrollEnabled={true}
-        />
-      )}
+      {/* Statistics View */}
+      <DeckStatistics
+        deck={deck}
+        flashcardCount={flashcards.length}
+        dueToday={dueToday}
+      />
 
       {/* Add/Edit Flashcard Modal */}
       <CustomFlashcardModal
@@ -165,7 +131,15 @@ export default function DeckDetailScreen() {
       <DeckEditModal
         visible={showEditDeckModal}
         onClose={modalHandlers.editDeck.hide}
-        onSave={handleUpdateDeck}
+        onSave={(updates) => {
+          // Convert Partial<UserDeck> to the expected format
+          handleUpdateDeck({
+            name: updates.custom_name || deck.custom_name || deck.deck_name || '',
+            description: updates.deck_description || deck.deck_description || '',
+            language: updates.deck_language || deck.deck_language || 'pl',
+            coverImageUrl: updates.deck_cover_image_url || deck.deck_cover_image_url || '',
+          });
+        }}
         deck={deck}
       />
 
@@ -204,5 +178,11 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 16,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginRight: 16,
   },
 });

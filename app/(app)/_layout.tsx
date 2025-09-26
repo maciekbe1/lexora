@@ -3,6 +3,7 @@ import { Tabs } from "expo-router";
 import React from "react";
 import { Platform } from "react-native";
 import { useAppTheme } from "@/theme/useAppTheme";
+import { t } from "@/locales/i18n";
 
 export default function AppLayout() {
   const { colors } = useAppTheme();
@@ -29,7 +30,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Moja Nauka",
+          title: t("navigation.myLearning"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="library" size={size} color={color} />
           ),
@@ -38,7 +39,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="search"
         options={{
-          title: "Szukaj",
+          title: t("navigation.search"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="search" size={size} color={color} />
           ),
@@ -47,7 +48,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Ustawienia",
+          title: t("navigation.settings"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings" size={size} color={color} />
           ),

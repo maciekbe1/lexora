@@ -20,7 +20,7 @@ import {
   SearchBar,
   SourceButton,
   UnsplashGrid,
-} from "./components";
+} from "./ImagePickerElements";
 import { useImagePicker } from "./useImagePicker";
 
 export interface ImagePickerComponentProps {
@@ -73,8 +73,6 @@ export function ImagePickerComponent({
     }
   }, [modalVisible]);
   // Grid now uses no extra horizontal padding; reserve a fixed gap between columns.
-  const CONTENT_PADDING = 20;
-  const COLUMN_GAP = 12;
   const imageSize = Math.floor(
     (screenWidth - CONTENT_PADDING * 2 - COLUMN_GAP) / 2
   );
@@ -89,7 +87,7 @@ export function ImagePickerComponent({
             )}
             {isUploading && <SkeletonView style={styles.selectedImage} />}
             <TouchableOpacity style={styles.removeButton} onPress={removeImage}>
-              <Ionicons name="close-circle" size={24} color="#fff" />
+              <Ionicons name="close-circle" size={ICON_SIZE} color="#fff" />
             </TouchableOpacity>
           </View>
         ) : (
@@ -107,7 +105,7 @@ export function ImagePickerComponent({
               <>
                 <Ionicons
                   name="image-outline"
-                  size={32}
+                  size={ICON_SIZE_LARGE}
                   color={colors.mutedText}
                 />
                 <Text
@@ -174,24 +172,34 @@ export function ImagePickerComponent({
   );
 }
 
+// Named constants for styling
+const IMAGE_HEIGHT = 120;
+const BORDER_RADIUS = 8;
+const ICON_SIZE = 24;
+const REMOVE_BUTTON_RADIUS = 12;
+const BUTTON_SPACING = 8;
+const ICON_SIZE_LARGE = 32;
+const CONTENT_PADDING = 20;
+const COLUMN_GAP = 12;
+
 const styles = StyleSheet.create({
   container: {
     borderWidth: 1,
     borderColor: "#ddd",
-    borderRadius: 8,
+    borderRadius: BORDER_RADIUS,
     overflow: "hidden",
   },
   imageContainer: { position: "relative" },
-  selectedImage: { width: "100%", height: 120, resizeMode: "cover" },
+  selectedImage: { width: "100%", height: IMAGE_HEIGHT, resizeMode: "cover" },
   removeButton: {
     position: "absolute",
-    top: 8,
-    right: 8,
+    top: BUTTON_SPACING,
+    right: BUTTON_SPACING,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
-    borderRadius: 12,
+    borderRadius: REMOVE_BUTTON_RADIUS,
   },
   placeholderContainer: {
-    height: 120,
+    height: IMAGE_HEIGHT,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#f9f9f9",
@@ -202,10 +210,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 8,
+    paddingVertical: BUTTON_SPACING,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
-  autoSearchToggle: { flexDirection: "row", alignItems: "center", gap: 8 },
+  autoSearchToggle: { flexDirection: "row", alignItems: "center", gap: BUTTON_SPACING },
   autoLabel: { fontSize: 12, color: "#666" },
 });

@@ -123,50 +123,76 @@ export function useDeckDetail() {
     }
   }, [user?.id, id, refreshDeck]);
 
+  const createNewFlashcard = (flashcardData: Omit<CustomFlashcard, "id" | "created_at" | "updated_at">): CustomFlashcard => {
+    if (!user || !deck) {
+      throw new Error('User or deck not available');
+    }
+
+    const flashcardId = require('expo-crypto').randomUUID();
+    const now = new Date().toISOString();
+
+    return {
+      id: flashcardId,
+      ...flashcardData,
+      user_deck_id: deck.id,
+      user_id: user.id,
+      position: flashcards.length + 1,
+      created_at: now,
+      updated_at: now,
+    };
+  };
+
+  const saveFlashcardToDatabase = async (newFlashcard: CustomFlashcard) => {
+    if (!deck) throw new Error('Deck not available');
+    await localDatabase.insertCustomFlashcard(newFlashcard);
+    await localDatabase.recalculateDeckStats(deck.id);
+  };
+
+  const reloadDeckData = async () => {
+    if (user?.id && id) {
+      await loadDeckData(user.id, id);
+    }
+  };
+
   // CRUD operations
   const handleCreateFlashcard = useCallback(async (
     flashcardData: Omit<CustomFlashcard, "id" | "created_at" | "updated_at">
   ) => {
     if (!user || !deck) return;
-    try {
-      // Create flashcard locally
-      const flashcardId = require('expo-crypto').randomUUID();
-      const now = new Date().toISOString();
-      const newFlashcard: CustomFlashcard = {
-        id: flashcardId,
-        ...flashcardData,
-        user_deck_id: deck.id,
-        user_id: user.id,
-        position: flashcards.length + 1,
-        created_at: now,
-        updated_at: now,
-      };
 
-      await localDatabase.insertCustomFlashcard(newFlashcard);
-      await localDatabase.recalculateDeckStats(deck.id);
-      
-      // Reload data
-      if (user?.id && id) {
-        await loadDeckData(user.id, id);
-      }
-      
+    try {
+      const newFlashcard = createNewFlashcard(flashcardData);
+      await saveFlashcardToDatabase(newFlashcard);
+      await reloadDeckData();
       Alert.alert("Sukces", "Fiszka została dodana!");
-    } catch (error) {
-      console.error("Error creating flashcard:", error);
+    } catch {
       Alert.alert("Błąd", "Nie udało się dodać fiszki");
     }
   }, [user, deck, flashcards.length, id, loadDeckData]);
 
-  const handleStartStudy = useCallback(() => {
-    if (!deck) return;
+  const validateDeckForStudy = (): boolean => {
+    if (!deck) return false;
+
     if (flashcards.length === 0) {
       Alert.alert(
         "Brak fiszek",
         "Dodaj najpierw fiszki do talii, żeby rozpocząć naukę"
       );
-      return;
+      return false;
     }
+
+    return true;
+  };
+
+  const navigateToStudySession = () => {
+    if (!deck) return;
     router.push({ pathname: `/study/${deck.id}` as any });
+  };
+
+  const handleStartStudy = useCallback(() => {
+    if (validateDeckForStudy()) {
+      navigateToStudySession();
+    }
   }, [deck, flashcards.length]);
 
   // Placeholder handlers for now
@@ -184,6 +210,41 @@ export function useDeckDetail() {
     Alert.alert("Info", "Delete flashcard - coming soon");
   }, []);
 
+  const createUpdatedDeck = (deckData: {
+    name: string;
+    description: string;
+    language: string;
+    coverImageUrl: string;
+  }): UserDeck => {
+    if (!deck) throw new Error('No deck to update');
+
+    return {
+      ...deck,
+      deck_name: deckData.name,
+      deck_description: deckData.description,
+      deck_language: deckData.language,
+      deck_cover_image_url: deckData.coverImageUrl,
+      deck_updated_at: new Date().toISOString()
+    };
+  };
+
+  const syncDeckToCloud = async () => {
+    setSyncing(true);
+    setSyncError(null);
+
+    try {
+      const syncResult = await localDatabase.syncToCloud();
+      if (syncResult) {
+        setSyncSuccess();
+      } else {
+        setSyncError('Failed to sync deck updates to cloud');
+      }
+    } catch (syncError) {
+      const errorMessage = syncError instanceof Error ? syncError.message : 'Unknown sync error';
+      setSyncError(errorMessage);
+    }
+  };
+
   const handleUpdateDeck = useCallback(async (deckData: {
     name: string;
     description: string;
@@ -191,85 +252,54 @@ export function useDeckDetail() {
     coverImageUrl: string;
   }) => {
     if (!deck || !user) return;
-    
+
     try {
-      console.log('🔄 Updating deck with new data:', deckData);
-      console.log('📦 Current deck before update:', {
-        id: deck.id,
-        deck_name: deck.deck_name,
-        custom_name: deck.custom_name
-      });
-      
-      // Update deck using insertUserDeck (it does INSERT OR REPLACE)
-      const updatedDeck: UserDeck = {
-        ...deck,
-        deck_name: deckData.name,
-        deck_description: deckData.description,
-        deck_language: deckData.language,
-        deck_cover_image_url: deckData.coverImageUrl,
-        deck_updated_at: new Date().toISOString()
-      };
-      
-      console.log('📝 Saving updated deck to database:', {
-        id: updatedDeck.id,
-        deck_name: updatedDeck.deck_name,
-        deck_description: updatedDeck.deck_description
-      });
-      
+      const updatedDeck = createUpdatedDeck(deckData);
       await localDatabase.insertUserDeck(updatedDeck);
-      
-      console.log('✅ Deck saved to local database');
-      
+
       // Reload deck data to show changes immediately
       if (user?.id && id) {
-        console.log('🔄 Reloading deck data...');
         await loadDeckData(user.id, id);
-        console.log('✅ Deck data reloaded');
       }
-      
+
       // Trigger sync to Supabase in the background
-      setSyncing(true);
-      setSyncError(null);
-      
-      try {
-        const syncResult = await localDatabase.syncToCloud();
-        if (syncResult) {
-          setSyncSuccess();
-          console.log('✅ Deck updated and synced to cloud successfully');
-        } else {
-          setSyncError('Failed to sync deck updates to cloud');
-          console.warn('⚠️ Deck updated locally but sync failed');
-        }
-      } catch (syncError) {
-        const errorMessage = syncError instanceof Error ? syncError.message : 'Unknown sync error';
-        setSyncError(errorMessage);
-        console.error('❌ Deck sync error:', syncError);
-      }
-      
+      await syncDeckToCloud();
+
       Alert.alert("Sukces", "Talia została zaktualizowana");
-    } catch (error) {
-      console.error('Error updating deck:', error);
+    } catch {
       Alert.alert("Błąd", "Nie udało się zaktualizować talii");
     }
-  }, [deck, user, id, loadDeckData, setSyncing, setSyncError, setSyncSuccess]);
+  }, [deck, user, id, loadDeckData]);
 
-  const handleDeleteDeck = useCallback(async () => {
-    if (!deck) return;
-    
-    const deckName = deck.deck_name || 'tę talię';
-
-    const hasProgress = false; // TODO: Calculate progress from actual data
-
-    let message: string;
-    if (deck.is_custom) {
-      message = hasProgress
+  const createDeleteMessage = (deckName: string, isCustomDeck: boolean, hasProgress: boolean): string => {
+    if (isCustomDeck) {
+      return hasProgress
         ? `Czy na pewno chcesz usunąć "${deckName}" całkowicie?\n\nUWAGA: Usuniesz talię, wszystkie fiszki, zdjęcia i cały postęp na zawsze. Tej operacji nie można cofnąć!`
         : `Czy na pewno chcesz usunąć "${deckName}" całkowicie?\n\nUsuniesz talię i wszystkie fiszki na zawsze. Tej operacji nie można cofnąć!`;
     } else {
-      message = hasProgress
+      return hasProgress
         ? `Czy na pewno chcesz usunąć "${deckName}" z kolekcji?\n\nUWAGA: Stracisz cały postęp nauki dla tej talii.`
         : `Czy na pewno chcesz usunąć "${deckName}" z kolekcji?`;
     }
+  };
+
+  const performDeckDeletion = async () => {
+    if (!deck) return;
+
+    try {
+      await removeDeck(deck);
+      router.back();
+    } catch {
+      // Error handling is done in removeDeck
+    }
+  };
+
+  const handleDeleteDeck = useCallback(async () => {
+    if (!deck) return;
+
+    const deckName = deck.deck_name || 'tę talię';
+    const hasProgress = false; // TODO: Calculate progress from actual data
+    const message = createDeleteMessage(deckName, deck.is_custom || false, hasProgress);
 
     Alert.alert(
       deck.is_custom ? 'Usuń talię całkowicie' : 'Usuń z kolekcji',
@@ -279,15 +309,7 @@ export function useDeckDetail() {
         {
           text: 'Tak',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await removeDeck(deck);
-              // Navigate back only after successful deletion
-              router.back();
-            } catch (error) {
-              console.error('Failed to delete deck:', error);
-            }
-          },
+          onPress: performDeckDeletion,
         },
       ]
     );
@@ -295,53 +317,47 @@ export function useDeckDetail() {
 
   const syncFlashcardPositions = useCallback(async () => {
     if (!user || !deck) return;
-    
+
     setSyncing(true);
     setSyncError(null);
-    
+
     try {
-      // Use the sync operation from the database service
       const result = await localDatabase.syncFlashcardPositions();
-      
+
       if (result.success) {
         setSyncSuccess();
-        console.log(`✅ Synced ${result.synced} flashcard positions`);
       } else {
         setSyncError(result.error || 'Sync failed');
-        console.error('❌ Flashcard position sync failed:', result.error);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown sync error';
       setSyncError(errorMessage);
-      console.error('❌ Flashcard position sync error:', error);
     }
   }, [user, deck, setSyncing, setSyncError, setSyncSuccess]);
 
+  const updateFlashcardPositions = async (reorderedFlashcards: CustomFlashcard[]) => {
+    const positionUpdates = reorderedFlashcards.map((card, index) => ({
+      id: card.id,
+      position: index + 1
+    }));
+
+    await localDatabase.updateMultipleFlashcardPositions(positionUpdates);
+  };
+
   const handleReorderFlashcards = useCallback(async (reorderedFlashcards: CustomFlashcard[]) => {
     if (!user || !deck || !deck.is_custom) return;
-    
+
     try {
-      // Update positions in the database (this marks flashcards as dirty)
-      const updates = reorderedFlashcards.map((card, index) => ({
-        id: card.id,
-        position: index + 1
-      }));
-      
-      await localDatabase.updateMultipleFlashcardPositions(updates);
-      
-      // Don't reload data - the UI already has the correct order
-      // Just trigger sync to save to cloud
+      await updateFlashcardPositions(reorderedFlashcards);
       await syncFlashcardPositions();
-      
-    } catch (error) {
-      console.error('Error reordering flashcards:', error);
+    } catch {
       Alert.alert("Błąd", "Nie udało się zmienić kolejności fiszek");
     }
   }, [user, deck, syncFlashcardPositions]);
 
   // Create flashcard handler that handles both create and update
   const handleFlashcardSubmit = editingFlashcard
-    ? (data: Omit<CustomFlashcard, "id" | "created_at" | "updated_at">) => 
+    ? (data: Omit<CustomFlashcard, "id" | "created_at" | "updated_at">) =>
         handleUpdateFlashcard(data, editingFlashcard)
     : handleCreateFlashcard;
 

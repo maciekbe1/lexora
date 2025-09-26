@@ -40,7 +40,7 @@ export function useImagePicker(userId: string | undefined, onImageSelected: (url
         const fileName = `flashcard_image_${Date.now()}`;
         const publicUrl = await storageService.uploadImageFromDevice(asset.uri, fileName, userId);
         onImageSelected(publicUrl);
-        setModalVisible(false);
+        closeModal();
       }
     } catch (error) {
       Alert.alert("Błąd", "Nie udało się przesłać zdjęcia");
@@ -49,6 +49,8 @@ export function useImagePicker(userId: string | undefined, onImageSelected: (url
       setIsUploading(false);
     }
   }, [userId, onImageSelected]);
+
+  const closeModal = React.useCallback(() => setModalVisible(false), []);
 
   const loadFeaturedImages = React.useCallback(async () => {
     setIsLoading(true);
@@ -126,7 +128,6 @@ export function useImagePicker(userId: string | undefined, onImageSelected: (url
   }, [userId, onImageSelected]);
 
   const openModal = React.useCallback(() => { setModalVisible(true); if (unsplashImages.length === 0) loadFeaturedImages(); }, [unsplashImages.length, loadFeaturedImages]);
-  const closeModal = React.useCallback(() => setModalVisible(false), []);
   // Debounced submit to avoid rapid repeated requests (Enter spam)
   const submitTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const submitSearch = React.useCallback(() => {

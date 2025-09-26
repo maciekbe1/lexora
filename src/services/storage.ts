@@ -1,6 +1,7 @@
 import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system';
 import { supabase } from '../../lib/supabase';
+import type { Bucket } from '@supabase/storage-js';
 
 export class StorageService {
   private bucketName = 'flashcard-images';
@@ -11,9 +12,7 @@ export class StorageService {
   async uploadImageFromDevice(uri: string, fileName: string, userId: string): Promise<string> {
     try {
       // Read file as base64
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      const base64 = await FileSystem.readAsStringAsync(uri);
 
       // Get file extension
       const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
@@ -129,7 +128,7 @@ export class StorageService {
     try {
       const url = new URL(publicUrl);
       const pathSegments = url.pathname.split('/');
-      const bucketIndex = pathSegments.findIndex(segment => segment === this.bucketName);
+      const bucketIndex = pathSegments.findIndex((segment: string) => segment === this.bucketName);
       
       if (bucketIndex === -1) return null;
       
@@ -147,7 +146,7 @@ export class StorageService {
       // Just check if bucket exists, don't try to create it
       // The bucket should be created by the database migration script
       const { data: buckets } = await supabase.storage.listBuckets();
-      const bucketExists = buckets?.some(bucket => bucket.name === this.bucketName);
+      const bucketExists = buckets?.some((bucket: Bucket) => bucket.name === this.bucketName);
 
       if (!bucketExists) {
         console.log(`Storage bucket '${this.bucketName}' not found in bucket list (may be a permissions issue)`);
